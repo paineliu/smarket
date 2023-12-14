@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# Demo
+robo/
+
 # Distribution / packaging
 .Python
 build/
