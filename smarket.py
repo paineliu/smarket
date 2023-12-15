@@ -31,31 +31,31 @@ def smarket_setup():
 
 def smarket_switch_callback(chn):
     print(chn)
-    if chn == PIN_BUTTON_ID:
-        g_led_rg.turn()
-        g_beep.turn()
-        g_led_la.turn()
-        # play_sound("./wav/alert_fire.wav")
+    # if chn == PIN_BUTTON_ID:
+    #     g_led_rg.turn()
+    #     g_beep.turn()
+    #     g_led_la.turn()
+    #     # play_sound("./wav/alert_fire.wav")
 
 def smarket_main():
-	global g_led_rg
-	global g_led_la
-	global g_beep 
+	# global g_led_rg
+	# global g_led_la
+	# global g_beep 
 	
-	g_led_la = Led(GPIO_5)
-	g_beep = Beep(GPIO_12)
-	g_led_rg = LedRG(PIN_LED_RED_ID, PIN_LED_GREEN_ID)
+	# g_led_la = Led(GPIO_5)
+	# g_beep = Beep(GPIO_12)
+	# g_led_rg = LedRG(PIN_LED_RED_ID, PIN_LED_GREEN_ID)
 
-	Vibration(GPIO_20, smarket_switch_callback)
-	UInterrupter(GPIO_20, smarket_switch_callback)
-	Switch(PIN_BUTTON_ID, smarket_switch_callback)
+	Vibration(GPIO_17, smarket_switch_callback)
+	# UInterrupter(GPIO_20, smarket_switch_callback)
+	# Switch(PIN_BUTTON_ID, smarket_switch_callback)
 	
 	while True:
 		pass
 	
 def smarket_clean():
-	g_led_la.off()
-	g_led_rg.off()
+	# g_led_la.off()
+	# g_led_rg.off()
 	GPIO.cleanup()
 
 

@@ -1,21 +1,28 @@
-# encoding: utf-8
-'''
-Company: 深圳市幻尔科技有限公司
-官网:hiwonder.com
-日期:2019/9/20
-by Aiden
-'''
-'''
- * 只能识别汉字，将要识别的汉字转换成拼音字母，每个汉字之间空格隔开，比如：幻尔科技 --> huan er ke ji
- * 最多添加50个词条，每个词条最长为79个字符，每个词条最多10个汉字
- * 每个词条都对应一个识别号（1~255随意设置）不同的语音词条可以对应同一个识别号，
- * 比如“幻尔科技”和“幻尔”都可以将识别号设置为同一个值
- * 模块上的STA状态灯：亮起表示正在识别语音，灭掉表示不会识别语音，当识别到语音时状态灯会变暗，或闪烁，等待读取后会恢复当前的状态指示
-'''
-#使用例程
 import smbus
 import time
-import numpy
+from indicator import *
+import RPi.GPIO as GPIO
+from switch import *
+from indicator import *
+from audio import play_sound
+
+GPIO_4 = 7
+GPIO_5 = 29
+GPIO_6 = 31
+GPIO_12 = 32
+GPIO_13 = 33
+GPIO_16 = 36
+GPIO_17 = 11
+GPIO_18 = 12
+GPIO_19 = 35
+GPIO_20 = 38
+GPIO_21 = 40
+GPIO_22 = 15
+GPIO_23 = 16
+GPIO_24 = 18
+GPIO_25 = 22
+GPIO_26 = 37
+GPIO_27 = 13
 
 class ASR:
 
@@ -91,16 +98,27 @@ class ASR:
 if __name__ == "__main__":
     addr = 0x79 #传感器iic地址
     asr = ASR(addr)
-
+	
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setwarnings(False)
+    led_rg = LedRG(GPIO_16, GPIO_17)
     #添加的词条和识别模式是可以掉电保存的，第一次设置完成后，可以将1改为0
     if 1:
         asr.eraseWords()
         asr.setMode(1)  #设置识别模式，值范围1~3：循环识别模式、口令模式、按键模式。
         asr.addWords(1, 'ni hao')
         asr.addWords(2, 'kai shi')
-        asr.addWords(2, 'ting zhi')
-        asr.addWords(3, 'ke le zai na')
+        asr.addWords(3, 'fan zhuan')
+        asr.addWords(4, 'ting zhi')
+        asr.addWords(5, 'ke le zai na')
     while 1:
         data = asr.getResult()
+        if (data == 2):
+            led_rg.green()
+        if (data == 3):
+            led_rg.red()
+        if (data == 4):
+            led_rg.off()
+
         print("result:", data)
         time.sleep(0.5)
