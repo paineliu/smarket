@@ -27,7 +27,8 @@ GPIO_27 = 13
 
 PIN_ID_IRO_ENTER = GPIO_5
 PIN_ID_IRO_EXIT = GPIO_21
-PIN_ID_IRO_FORBID = 13
+PIN_ID_USONIC_E = GPIO_4
+PIN_ID_USONIC_T = GPIO_16
 
 PIN_ID_BTN_BUY_1 = GPIO_6
 PIN_ID_BTN_BUY_2 = GPIO_17
@@ -35,11 +36,11 @@ PIN_ID_BTN_RESET = GPIO_26
 PIN_ID_UIRP_PAY = GPIO_20
 PIN_ID_FAN_AIR = GPIO_25
 
-PIN_ID_LED_GREEN = 13
+PIN_ID_LED_GREEN = GPIO_13
 PIN_ID_LED_RED = GPIO_18
-PIN_ID_LED_COLOR = 13
+PIN_ID_LED_COLOR = GPIO_27
 
-PIN_ID_BIZZER = 13
+PIN_ID_BIZZER = GPIO_19
 PIN_ID_LASER = GPIO_24
 
 PIN_ID_FlAME = GPIO_22
@@ -50,18 +51,6 @@ ACT_ENTER = 1
 ACT_EXIT = 2
 ACT_FIND_COLA = 3
 
-
-g_user_state = 0
-
-g_cola_toal = 5
-g_milk_toal = 5
-g_user_cola = 0
-g_user_milk = 0
-
-g_tts = TTS()
-g_audio = Audio()
-g_user = User()
-g_goods = Stock()
 
 class SMarket:
     def __init__(self):
@@ -78,17 +67,19 @@ class SMarket:
         self.asr = ASR(0x79)
         self.ir_enter = IRObstacle(PIN_ID_IRO_ENTER)   # 进入
         self.ir_exit = IRObstacle(PIN_ID_IRO_EXIT)     # 离开
-        self.ir_forbid = IRObstacle(PIN_ID_IRO_FORBID) # 禁区
+        self.us_forbid = Ultrasonic(PIN_ID_USONIC_T, PIN_ID_USONIC_E) # 禁区
         self.laser = Laser(PIN_ID_LASER)
         self.red_light = Led(PIN_ID_LED_RED)
         self.green_light = Led(PIN_ID_LED_GREEN)
         self.warning_light = Led(PIN_ID_LED_COLOR)
         self.reset = ColorButton(PIN_ID_BTN_RESET, gpio_callback)
+        self.bizzer = Bizzer(PIN_ID_BIZZER)
         print("\nStart completed.")
 
     def detect(self, detect_callback):
         asr_id = self.asr.getResult()
         print('asr', time.time(), asr_id)
+        print('dis', self.us_forbid.disMeasure())
         if (asr_id == 5):
             detect_callback(ACT_FIND_COLA)
 
@@ -111,9 +102,13 @@ class SMarket:
     
     def flame_on(self):
         self.red_light.on()
+        self.warning_light.on()
+        self.bizzer.on()
 
     def flame_off(self):
         self.red_light.off()
+        self.warning_light.off()
+        self.bizzer.off()
 
     def reset1(self):
         if self.fan_is_on():
@@ -124,6 +119,10 @@ class SMarket:
     def clean(self):
         GPIO.cleanup()    
 
+g_tts = TTS()
+g_audio = Audio()
+g_user = User()
+g_stock = Stock()
 g_smarket = SMarket()
 
 def smarket_detect_callback(act_id):
@@ -180,11 +179,11 @@ def smarket_gpio_callback(pin_id):
     if (pin_id == PIN_ID_BTN_BUY_1):
         if (GPIO.input(pin_id) == 1):
             product_id = Product.COLA
-            if g_goods.get_total(product_id) > 0:
-                g_goods.sell(product_id)
+            if g_stock.get_total(product_id) > 0:
+                g_stock.sell(product_id)
                 g_user.buy(product_id)
-                if g_goods.get_total(product_id) > 0:
-                    g_tts.say('你买了{}瓶可乐，库存还有{}瓶'.format(g_user.get_total(product_id), g_goods.get_total(product_id)))
+                if g_stock.get_total(product_id) > 0:
+                    g_tts.say('你买了{}瓶可乐，库存还有{}瓶'.format(g_user.get_total(product_id), g_stock.get_total(product_id)))
                 else:
                     g_tts.say('你买了{}瓶可乐，已经没有库存了'.format(g_user.get_total(product_id)))
             else:
@@ -193,11 +192,11 @@ def smarket_gpio_callback(pin_id):
     if (pin_id == PIN_ID_BTN_BUY_2):
         if (GPIO.input(pin_id) == 1):
             product_id = Product.MILK
-            if g_goods.get_total(product_id) > 0:
-                g_goods.sell(product_id)
+            if g_stock.get_total(product_id) > 0:
+                g_stock.sell(product_id)
                 g_user.buy(product_id)
-                if g_goods.get_total(product_id) > 0:
-                    g_tts.say('你买了{}瓶牛奶，库存还有{}瓶'.format(g_user.get_total(product_id), g_goods.get_total(product_id)))
+                if g_stock.get_total(product_id) > 0:
+                    g_tts.say('你买了{}瓶牛奶，库存还有{}瓶'.format(g_user.get_total(product_id), g_stock.get_total(product_id)))
                 else:
                     g_tts.say('你买了{}瓶牛奶，已经没有库存了'.format(g_user.get_total(product_id)))
             else:

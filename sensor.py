@@ -44,7 +44,7 @@ class Laser(Indicator):
         super().__init__(pin_id)
 
 # 蜂鸣器
-class Buzzer(Indicator):
+class Bizzer(Indicator):
     def __init__(self,pin_id):
         super().__init__(pin_id, on_val=0, off_val=1)
     
