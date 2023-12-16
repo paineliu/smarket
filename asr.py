@@ -1,28 +1,7 @@
 import smbus
 import time
-from indicator import *
+from sensor import *
 import RPi.GPIO as GPIO
-from switch import *
-from indicator import *
-from audio import play_sound
-
-GPIO_4 = 7
-GPIO_5 = 29
-GPIO_6 = 31
-GPIO_12 = 32
-GPIO_13 = 33
-GPIO_16 = 36
-GPIO_17 = 11
-GPIO_18 = 12
-GPIO_19 = 35
-GPIO_20 = 38
-GPIO_21 = 40
-GPIO_22 = 15
-GPIO_23 = 16
-GPIO_24 = 18
-GPIO_25 = 22
-GPIO_26 = 37
-GPIO_27 = 13
 
 class ASR:
 
@@ -96,12 +75,11 @@ class ASR:
         return True
         
 if __name__ == "__main__":
-    addr = 0x79 #传感器iic地址
-    asr = ASR(addr)
+    
+    asr = ASR(0x79)
 	
     GPIO.setmode(GPIO.BOARD)
     GPIO.setwarnings(False)
-    led_rg = LedRG(GPIO_16, GPIO_17)
     #添加的词条和识别模式是可以掉电保存的，第一次设置完成后，可以将1改为0
     if 1:
         asr.eraseWords()
@@ -113,12 +91,5 @@ if __name__ == "__main__":
         asr.addWords(5, 'ke le zai na')
     while 1:
         data = asr.getResult()
-        if (data == 2):
-            led_rg.green()
-        if (data == 3):
-            led_rg.red()
-        if (data == 4):
-            led_rg.off()
-
         print("result:", data)
-        time.sleep(0.5)
+        time.sleep(0.2)

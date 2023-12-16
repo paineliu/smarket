@@ -1,5 +1,6 @@
 import os
 
-def play_sound(filename):
-    os.system("mplayer {}".format(filename))
+class Audio:
+    def play(self, filename):
+        os.system("mplayer {}".format(filename))
 
