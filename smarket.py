@@ -3,9 +3,11 @@ from sensor import *
 from audio import Audio
 from asr import ASR
 from tts import TTS
+from tts_baidu import TTSBaidu
 from product import Product
 from user import User
 from strock import Stock
+from datetime import datetime
 
 GPIO_4 = 7
 GPIO_5 = 29
@@ -78,8 +80,8 @@ class SMarket:
 
     def detect(self, detect_callback):
         asr_id = self.asr.getResult()
-        print('asr', time.time(), asr_id)
-        print('dis', self.us_forbid.disMeasure())
+        # print('asr', time.time(), asr_id)
+        # print('dis', self.us_forbid.disMeasure())
         if (asr_id == 5):
             detect_callback(ACT_FIND_COLA)
 
@@ -119,14 +121,15 @@ class SMarket:
     def clean(self):
         GPIO.cleanup()    
 
-g_tts = TTS()
+g_tts = TTSBaidu()
 g_audio = Audio()
 g_user = User()
 g_stock = Stock()
 g_smarket = SMarket()
 
 def smarket_detect_callback(act_id):
-    print('detect', time.time(), act_id)
+    print('[{}] act={}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], act_id))
+    
     if (act_id == ACT_ENTER):
         if (g_user.get_status() != User.ENTER):
             g_user.enter()
@@ -143,7 +146,7 @@ def smarket_detect_callback(act_id):
 
 
 def smarket_gpio_callback(pin_id):
-    print('gpio', time.time(), pin_id, GPIO.input(pin_id))
+    print('[{}] pin={}, val={}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], pin_id, GPIO.input(pin_id)))
 
     if (pin_id == PIN_ID_BTN_RESET):
         g_smarket.reset1()
