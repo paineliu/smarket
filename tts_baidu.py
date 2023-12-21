@@ -85,6 +85,7 @@ class TTSBaidu:
         return md5_val
     
     def say(self, message):
+        print(message)
         md5_str = self.string_to_md5(message)
         os.makedirs("./wav", exist_ok=True)
         wav_filename = os.path.join('./wav', md5_str + ".wav")

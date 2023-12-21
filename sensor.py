@@ -1,3 +1,4 @@
+import os
 import time
 import RPi.GPIO as GPIO
 
@@ -52,7 +53,11 @@ class Bizzer(Indicator):
 class Fan(Indicator):
     def __init__(self, pin_id):
         super().__init__(pin_id)
-    
+# 马达
+class Motor(Indicator):
+    def __init__(self, pin_id):
+        super().__init__(pin_id)
+            
 # 双色LED灯
 class LedRG:
     def __init__(self, red_pin_id, green_pin_id):
@@ -124,7 +129,7 @@ class Photoresistor(Switch):
     def __init__(self, pin_id, pin_callback):
         super().__init__(pin_id, pin_callback, edge = GPIO.BOTH)
 
-# 温度传感器
+# 火焰传感器
 class Flame(Switch):
     def __init__(self, pin_id, pin_callback):
         super().__init__(pin_id, pin_callback, edge = GPIO.BOTH)
@@ -167,26 +172,41 @@ class Ultrasonic():
 
         return us_during * 340 / 2 * 100
 
+class Temperature:           
+    def __init__(self):
+        self.ds18b20 = ''  # ds18b20 设备
+        for i in os.listdir('/sys/bus/w1/devices'):
+            if i != 'w1_bus_master1':
+                self.ds18b20 = i       # ds18b20存放在ds18b20地址
+        self.temperature = self.read() + 1
+        print(self.temperature)
+
+    # 读取ds18b20地址数据
+    def read(self):
+        location = '/sys/bus/w1/devices/' + self.ds18b20 + '/w1_slave' # 保存ds18b20地址信息
+        tfile = open(location)  # 打开ds18b20 
+        text = tfile.read()     # 读取到温度值
+        tfile.close()                    # 关闭读取
+        secondline = text.split("\n")[1] # 格式化处理
+        temperaturedata = secondline.split(" ")[9]# 获取温度数据
+        temperature = float(temperaturedata[2:])  # 去掉前两位
+        temperature = temperature / 1000          # 去掉小数点
+        return temperature                        # 返回温度值
+    
+    def hot(self):
+        temper = self.read()
+        if temper is not None and temper > self.temperature:
+            return True
+        return False
+
 if __name__ == '__main__': 
     
-    def test_pin_callback(chn):
-        print(time.time(), chn, GPIO.input(chn))
-        if (GPIO.input(chn) == 1):
-            rg.red()
-        else:
-            rg.off()
-
-    global fan
-    global rg
     GPIO.setmode(GPIO.BOARD)
-    GPIO.setwarnings(False)
-    # ir = IRObstacle(11)
-    # rg = LedRG(12, 13)
-    us = Ultrasonic(11, 12)
-    # fan = Fan(12)
-    
+
+    b = Bizzer(16)    
+    # b.on()
+
     while True:
-        print("dis" , time.time(), us.disMeasure())
         time.sleep(0.2)
 
     # GPIO.setmode(GPIO.BOARD)

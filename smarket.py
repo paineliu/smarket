@@ -27,31 +27,29 @@ GPIO_25 = 22
 GPIO_26 = 37
 GPIO_27 = 13
 
-PIN_ID_IRO_ENTER = GPIO_5
-PIN_ID_IRO_EXIT = GPIO_21
-PIN_ID_USONIC_E = GPIO_4
-PIN_ID_USONIC_T = GPIO_16
-
-PIN_ID_BTN_BUY_1 = GPIO_6
-PIN_ID_BTN_BUY_2 = GPIO_17
-PIN_ID_BTN_RESET = GPIO_26
-PIN_ID_UIRP_PAY = GPIO_20
-PIN_ID_FAN_AIR = GPIO_25
-
+PIN_ID_IRO_ENTER = GPIO_17
+PIN_ID_BTN_BUY_1 = GPIO_27
+PIN_ID_BTN_BUY_2 = GPIO_22 
+PIN_ID_UIRP_PAY  = GPIO_5
+PIN_ID_FAN_AIR   = GPIO_6
 PIN_ID_LED_GREEN = GPIO_13
-PIN_ID_LED_RED = GPIO_18
-PIN_ID_LED_COLOR = GPIO_27
+PIN_ID_LED_RED = GPIO_19
+PIN_ID_FlAME = GPIO_26
 
-PIN_ID_BIZZER = GPIO_19
-PIN_ID_LASER = GPIO_24
+PIN_ID_MOTOR = GPIO_12
+PIN_ID_USONIC_T = GPIO_16
+PIN_ID_USONIC_E = GPIO_20
+PIN_ID_IRO_EXIT = GPIO_21
 
-PIN_ID_FlAME = GPIO_22
-
-PIN_ID_PRET = GPIO_12
+PIN_ID_BIZZER    = GPIO_23
+PIN_ID_LED_COLOR = GPIO_24
+PIN_ID_BTN_RESET = GPIO_25
 
 ACT_ENTER = 1
 ACT_EXIT = 2
-ACT_FIND_COLA = 3
+ACT_FAN_ON = 3
+ACT_FAN_OFF = 4
+ACT_FIND_COLA = 11
 
 
 class SMarket:
@@ -60,28 +58,37 @@ class SMarket:
         GPIO.setwarnings(False)
 
     def start(self, gpio_callback):
-        self.fan = Fan(PIN_ID_FAN_AIR)
-        self.buy_cola = ColorButton(PIN_ID_BTN_BUY_1, gpio_callback)
-        self.buy_milk = ColorButton(PIN_ID_BTN_BUY_2, gpio_callback)
-        self.pay = Reed(PIN_ID_UIRP_PAY, gpio_callback)
-        self.temperature = Photoresistor(PIN_ID_PRET, gpio_callback)
-        self.flame = Flame(PIN_ID_FlAME, gpio_callback)
         self.asr = ASR(0x79)
+        self.temper = Temperature()
         self.ir_enter = IRObstacle(PIN_ID_IRO_ENTER)   # 进入
+        self.buy_cola = UInterrupter(PIN_ID_BTN_BUY_1, gpio_callback) # 买可乐
+        self.buy_milk = ColorButton(PIN_ID_BTN_BUY_2, gpio_callback) # 买牛奶
+        self.pay = Reed(PIN_ID_UIRP_PAY, gpio_callback) # 付款
         self.ir_exit = IRObstacle(PIN_ID_IRO_EXIT)     # 离开
+        self.fan = Fan(PIN_ID_FAN_AIR)
         self.us_forbid = Ultrasonic(PIN_ID_USONIC_T, PIN_ID_USONIC_E) # 禁区
-        self.laser = Laser(PIN_ID_LASER)
+        
         self.red_light = Led(PIN_ID_LED_RED)
         self.green_light = Led(PIN_ID_LED_GREEN)
-        self.warning_light = Led(PIN_ID_LED_COLOR)
+        
+        self.flame = Flame(PIN_ID_FlAME, gpio_callback)
+        self.motor = Laser(PIN_ID_MOTOR)
+        
         self.reset = ColorButton(PIN_ID_BTN_RESET, gpio_callback)
+        self.color_light = Led(PIN_ID_LED_COLOR)
         self.bizzer = Bizzer(PIN_ID_BIZZER)
+
         print("\nStart completed.")
 
     def detect(self, detect_callback):
         asr_id = self.asr.getResult()
         # print('asr', time.time(), asr_id)
-        # print('dis', self.us_forbid.disMeasure())
+        print('dis', self.us_forbid.disMeasure())
+        if (self.temper.hot()):
+            detect_callback(ACT_FAN_ON)
+        else:
+            detect_callback(ACT_FAN_OFF)
+
         if (asr_id == 5):
             detect_callback(ACT_FIND_COLA)
 
@@ -104,15 +111,13 @@ class SMarket:
     
     def flame_on(self):
         self.red_light.on()
-        self.warning_light.on()
-        self.bizzer.on()
+        self.color_light.on()
 
     def flame_off(self):
         self.red_light.off()
-        self.warning_light.off()
-        self.bizzer.off()
+        self.color_light.off()
 
-    def reset1(self):
+    def reset_all(self):
         if self.fan_is_on():
             self.fan_off()
         if self.flame_is_on():
@@ -128,8 +133,16 @@ g_stock = Stock()
 g_smarket = SMarket()
 
 def smarket_detect_callback(act_id):
-    print('[{}] act={}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], act_id))
+    print('[{}] act={} temp={}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], act_id, g_smarket.temper.read()))
     
+    if (act_id == ACT_FAN_ON):
+        if (not g_smarket.fan_is_on()):
+            g_smarket.fan_on()
+
+    if (act_id == ACT_FAN_OFF):
+        if (g_smarket.fan_is_on()):
+            g_smarket.fan_off()
+
     if (act_id == ACT_ENTER):
         if (g_user.get_status() != User.ENTER):
             g_user.enter()
@@ -149,17 +162,20 @@ def smarket_gpio_callback(pin_id):
     print('[{}] pin={}, val={}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], pin_id, GPIO.input(pin_id)))
 
     if (pin_id == PIN_ID_BTN_RESET):
-        g_smarket.reset1()
+        # if (g_smarket.color_light.is_on()):
+        #     g_smarket.color_light.off()
+        #     g_smarket.motor.off()
+        # else:
+        g_smarket.green_light.on()
+        g_smarket.color_light.on()
+        g_smarket.motor.on()
+        g_smarket.bizzer.on()
+        
 
     if (pin_id == PIN_ID_FlAME):
         if (not g_smarket.flame_is_on()):
             g_tts.say('检测到火情，请迅速撤离')
             g_smarket.flame_on()
-
-    if (pin_id == PIN_ID_PRET):
-        if (not g_smarket.fan_is_on()):
-            g_tts.say('检测到超市温度过高，自动开启空调')
-            g_smarket.fan_on()
 
     if (pin_id == PIN_ID_UIRP_PAY):
         if (GPIO.input(pin_id) == 0):
