@@ -53,11 +53,7 @@ class Bizzer(Indicator):
 class Fan(Indicator):
     def __init__(self, pin_id):
         super().__init__(pin_id)
-# 马达
-class Motor(Indicator):
-    def __init__(self, pin_id):
-        super().__init__(pin_id)
-            
+
 # 双色LED灯
 class LedRG:
     def __init__(self, red_pin_id, green_pin_id):
@@ -172,17 +168,18 @@ class Ultrasonic():
 
         return us_during * 340 / 2 * 100
 
+# 温度传感器
 class Temperature:           
     def __init__(self):
         self.ds18b20 = ''  # ds18b20 设备
         for i in os.listdir('/sys/bus/w1/devices'):
             if i != 'w1_bus_master1':
                 self.ds18b20 = i       # ds18b20存放在ds18b20地址
-        self.temperature = self.read() + 1
-        print(self.temperature)
+        self.init_temper = self.get_temper()
+        print(self.init_temper)
 
     # 读取ds18b20地址数据
-    def read(self):
+    def get_temper(self):
         location = '/sys/bus/w1/devices/' + self.ds18b20 + '/w1_slave' # 保存ds18b20地址信息
         tfile = open(location)  # 打开ds18b20 
         text = tfile.read()     # 读取到温度值
@@ -193,9 +190,12 @@ class Temperature:
         temperature = temperature / 1000          # 去掉小数点
         return temperature                        # 返回温度值
     
+    def get_init_temper(self):
+        return self.init_temper
+    
     def hot(self):
-        temper = self.read()
-        if temper is not None and temper > self.temperature:
+        temper = self.get_temper()
+        if temper is not None and temper > self.init_temper:
             return True
         return False
 
@@ -204,7 +204,6 @@ if __name__ == '__main__':
     GPIO.setmode(GPIO.BOARD)
 
     b = Bizzer(16)    
-    # b.on()
 
     while True:
         time.sleep(0.2)

@@ -8,7 +8,8 @@ class ASR:
     # Global Variables
     address = None
     bus = None
-    
+    FIND_COLA = 11
+    FIND_MILK = 12
     ASR_RESULT_ADDR = 100
     #识别结果存放处，通过不断读取此地址的值判断是否识别到语音，不同的值对应不同的语音
 
@@ -68,6 +69,25 @@ class ASR:
            return False
         return True
     
+    def initWords(self):
+        self.eraseWords()
+        self.setMode(1)  #设置识别模式，值范围1~3：循环识别模式、口令模式、按键模式。
+
+        self.addWords(1, 'ni hao')
+        self.addWords(2, 'kai shi')
+        self.addWords(3, 'fan zhuan')
+        self.addWords(4, 'ting zhi')
+        
+        self.addWords(self.FIND_COLA, 'ke le')
+        self.addWords(self.FIND_COLA, 'ke le zai na')
+        self.addWords(self.FIND_COLA, 'ke le zai na li')
+        self.addWords(self.FIND_COLA, 'ke le you ma')
+
+        self.addWords(self.FIND_MILK, 'niu nai')
+        self.addWords(self.FIND_MILK, 'niu nai zai na')
+        self.addWords(self.FIND_MILK, 'niu nai zai na li')
+        self.addWords(self.FIND_MILK, 'niu nai you ma')
+
     def setMode(self, mode): 
         result = self.bus.write_byte_data(self.address, self.ASR_MODE_ADDR, mode)
         if result != 0:
@@ -80,15 +100,28 @@ if __name__ == "__main__":
 	
     GPIO.setmode(GPIO.BOARD)
     GPIO.setwarnings(False)
+
     #添加的词条和识别模式是可以掉电保存的，第一次设置完成后，可以将1改为0
     if 1:
-        asr.eraseWords()
-        asr.setMode(1)  #设置识别模式，值范围1~3：循环识别模式、口令模式、按键模式。
-        asr.addWords(1, 'ni hao')
-        asr.addWords(2, 'kai shi')
-        asr.addWords(3, 'fan zhuan')
-        asr.addWords(4, 'ting zhi')
-        asr.addWords(5, 'ke le zai na')
+        asr.initWords()
+        # asr.eraseWords()
+        # asr.setMode(1)  #设置识别模式，值范围1~3：循环识别模式、口令模式、按键模式。
+
+        # asr.addWords(1, 'ni hao')
+        # asr.addWords(2, 'kai shi')
+        # asr.addWords(3, 'fan zhuan')
+        # asr.addWords(4, 'ting zhi')
+        
+        # asr.addWords(asr.FIND_COLA, 'ke le')
+        # asr.addWords(asr.FIND_COLA, 'ke le zai na')
+        # asr.addWords(asr.FIND_COLA, 'ke le zai na li')
+        # asr.addWords(asr.FIND_COLA, 'ke le you ma')
+
+        # asr.addWords(asr.FIND_MILK, 'niu nai')
+        # asr.addWords(asr.FIND_MILK, 'niu nai zai na')
+        # asr.addWords(asr.FIND_MILK, 'niu nai zai na li')
+        # asr.addWords(asr.FIND_MILK, 'niu nai you ma')
+        
     while 1:
         data = asr.getResult()
         print("result:", data)
