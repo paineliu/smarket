@@ -47,7 +47,7 @@ SCOPE = 'audio_tts_post'  # 有此scope表示有tts能力，没有请在网页�
 
 
 def fetch_token():
-    print("fetch token begin")
+    # print("fetch token begin")
     params = {'grant_type': 'client_credentials',
               'client_id': API_KEY,
               'client_secret': SECRET_KEY}
@@ -62,13 +62,13 @@ def fetch_token():
         result_str = err.read()
     result_str = result_str.decode()
 
-    print(result_str)
+    # print(result_str)
     result = json.loads(result_str)
-    print(result)
+    # print(result)
     if ('access_token' in result.keys() and 'scope' in result.keys()):
         if not SCOPE in result['scope'].split(' '):
             raise DemoError('scope is not correct')
-        print('SUCCESS WITH TOKEN: %s ; EXPIRES IN SECONDS: %s' % (result['access_token'], result['expires_in']))
+        # print('SUCCESS WITH TOKEN: %s ; EXPIRES IN SECONDS: %s' % (result['access_token'], result['expires_in']))
         return result['access_token']
     else:
         raise DemoError('MAYBE API_KEY or SECRET_KEY not correct: access_token or scope not found in token response')
@@ -100,7 +100,7 @@ class TTSBaidu:
                 'lan': 'zh', 'ctp': 1}  # lan ctp 固定参数
 
         data = urlencode(params)
-        print('test on Web Browser' + TTS_URL + '?' + data)
+        # print('test on Web Browser' + TTS_URL + '?' + data)
 
         req = Request(TTS_URL, data.encode('utf-8'))
         has_error = False

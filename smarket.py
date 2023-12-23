@@ -9,23 +9,6 @@ from user import User
 from store import Store
 from datetime import datetime
 
-GPIO_4  = 7
-GPIO_5  = 29
-GPIO_6  = 31
-GPIO_12 = 32
-GPIO_13 = 33
-GPIO_16 = 36
-GPIO_17 = 11
-GPIO_18 = 12
-GPIO_19 = 35
-GPIO_20 = 38
-GPIO_21 = 40
-GPIO_22 = 15
-GPIO_23 = 16
-GPIO_24 = 18
-GPIO_25 = 22
-GPIO_26 = 37
-GPIO_27 = 13
 
 PIN_ID_IRO_ENTER = GPIO_17
 PIN_ID_BTN_BUY_1 = GPIO_27
@@ -60,12 +43,14 @@ ACT_FIND_MILK = 12
 
 class SMarket:
     def __init__(self):
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setwarnings(False)
         self.audio = Audio()
         self.tts = TTSBaidu()
         self.user = User()
         self.store = Store()
+        self.fan_state = ACT_FAN_OFF
+        self.forbid_state = ACT_FORBID_SAFE
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setwarnings(False)
 
     def start(self, gpio_callback):
 
@@ -92,35 +77,48 @@ class SMarket:
 
     def detect(self, detect_callback):
 
-        # 语音识别
         asr_id = self.asr.getResult()
+        curr_temper = self.temper.get_temper()
+        dis = self.us_forbid.disMeasure()
+        enter = self.ir_enter.input()
+        exit = self.ir_exit.input()
+        
+        print('[{}] asr={} temp={:.1f} enter={} exit={} dis={:.3f}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], asr_id, curr_temper, enter, exit, dis))
+
+        # 语音识别
         if (asr_id == self.asr.FIND_COLA): 
             detect_callback(ACT_FIND_COLA)
         elif (asr_id == self.asr.FIND_MILK):
             detect_callback(ACT_FIND_MILK) 
 
         # 温度检测
-        curr_temper = self.temper.get_temper()
         init_temper = self.temper.get_init_temper()
         if (curr_temper > init_temper + 1.0):
-            detect_callback(ACT_FAN_ON, curr_temper)
+            if not self.fan_state == ACT_FAN_ON:
+                self.fan_state = ACT_FAN_ON
+                detect_callback(ACT_FAN_ON, curr_temper)
         else:
-            detect_callback(ACT_FAN_OFF, curr_temper)
+            if not self.fan_state == ACT_FAN_OFF:
+                self.fan_state = ACT_FAN_OFF
+                detect_callback(ACT_FAN_OFF, curr_temper)
 
         # 进入检测
-        if (self.ir_enter.detect()):
+        if (enter == 0):
             detect_callback(ACT_ENTER)
 
         # 离开检测
-        if (self.ir_exit.detect()):
+        if (exit == 0):
             detect_callback(ACT_EXIT)
 
         # 禁区检测
-        dis = self.us_forbid.disMeasure()
         if (dis < 8.0):
-            detect_callback(ACT_FORBID_UNSAFE, dis)
+            if not self.forbid_state == ACT_FORBID_UNSAFE:
+                self.forbid_state = ACT_FORBID_UNSAFE
+                detect_callback(ACT_FORBID_UNSAFE, dis)
         else:
-            detect_callback(ACT_FORBID_SAFE, dis)
+            if not self.forbid_state == ACT_FORBID_SAFE:
+                self.forbid_state = ACT_FORBID_SAFE
+                detect_callback(ACT_FORBID_SAFE, dis)
 
     def fan_is_on(self):
         return self.fan.is_on()
@@ -134,22 +132,20 @@ class SMarket:
             self.fan.off()
 
     def flame_is_on(self):
-        return self.red_light.is_on()
+        return self.color_light.is_on()
     
     def flame_on(self, play_voice=True):
         if not self.flame_is_on():
             if play_voice:
-                self.tts.say('检测到火情，请迅速撤离')
+                self.tts.say('检测到火情，请立即撤离')
             self.red_light.on()
             self.color_light.on()
 
-
     def flame_off(self, play_voice=True):
         if self.flame_is_on():
-            self.red_light.off()
             self.color_light.off()
             if play_voice:
-                self.tts.say('火情解除，请放心购物')
+                self.tts.say('火情解除')
 
     def forbid_is_on(self):
         return self.bizzer.is_on()
@@ -157,7 +153,7 @@ class SMarket:
     def forbid_on(self, play_voice=True):
         if (not self.forbid_is_on()):
             if play_voice:
-                self.tts.say("监测到非法入侵，请快速离开")
+                self.tts.say("检测到非法入侵，请快速离开")
             self.bizzer.on()
         
     def forbid_off(self, play_voice=True):
@@ -181,13 +177,13 @@ class SMarket:
             self.tts.say(message)
             self.user.pay()
         else:
-            self.tts.say('你没有购买商品，随便买点吧')
+            self.tts.say('你还没有购买商品，随便买点吧')
     
     def find(self, product_id):
         if (product_id == Product.COLA):
-            self.audio.play('./wav/find_cola.wav')
+            self.tts.say('可乐在C区，第二排货架')
         if product_id == Product.MILK:
-            self.audio.play('./wav/find_milk.wav')
+            self.tts.say('牛奶在A区，第一排货架')
 
     def buy(self, product_id):
         if (product_id == Product.COLA):
@@ -214,7 +210,8 @@ class SMarket:
     def user_enter(self):
         if (self.user.get_status() != User.ENTER):
             self.user.enter()
-            self.audio.play('./wav/welcome.wav')
+            self.tts.say('欢迎光临')
+            # self.audio.play('./wav/welcome.wav')
 
 
     def user_leave(self):
@@ -224,7 +221,8 @@ class SMarket:
                 self.red_light.on()
             else:
                 self.user.leave()
-                self.audio.play('./wav/bye.wav')
+                self.tts.say('谢谢惠顾，欢迎下次光临')
+                # self.audio.play('./wav/bye.wav')
 
     def reset_all(self):
         self.fan_off(False)
@@ -237,7 +235,7 @@ class SMarket:
 g_smarket = SMarket()
 
 def smarket_detect_callback(act_id, param = None):
-    print('[{}] act_id={}, param = {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], act_id, param))
+    print('  act_id={}, param = {}'.format(act_id, param))
     
     # 风扇打开
     if (act_id == ACT_FAN_ON):

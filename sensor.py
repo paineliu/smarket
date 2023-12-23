@@ -2,6 +2,24 @@ import os
 import time
 import RPi.GPIO as GPIO
 
+GPIO_4  = 7
+GPIO_5  = 29
+GPIO_6  = 31
+GPIO_12 = 32
+GPIO_13 = 33
+GPIO_16 = 36
+GPIO_17 = 11
+GPIO_18 = 12
+GPIO_19 = 35
+GPIO_20 = 38
+GPIO_21 = 40
+GPIO_22 = 15
+GPIO_23 = 16
+GPIO_24 = 18
+GPIO_25 = 22
+GPIO_26 = 37
+GPIO_27 = 13
+
 # 指示类传感器
 class Indicator:
     OFF = 0
@@ -136,6 +154,9 @@ class IRObstacle():
         self.pin_id = pin_id
         GPIO.setup(self.pin_id, GPIO.IN)
 
+    def input(self):
+        return GPIO.input(self.pin_id)
+    
     def detect(self):
         return GPIO.input(self.pin_id) == 0
 
@@ -176,7 +197,7 @@ class Temperature:
             if i != 'w1_bus_master1':
                 self.ds18b20 = i       # ds18b20存放在ds18b20地址
         self.init_temper = self.get_temper()
-        print(self.init_temper)
+        # print(self.init_temper)
 
     # 读取ds18b20地址数据
     def get_temper(self):
@@ -199,14 +220,38 @@ class Temperature:
             return True
         return False
 
+def test_ir(pin_id):
+    GPIO.setmode(GPIO.BOARD)
+    ir = IRObstacle(pin_id=pin_id)
+    try:
+        while True:
+            print(GPIO.input(pin_id))
+            ir.detect()
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        pass
+    
+def test_us(pin_t_id, pin_e_id):
+    GPIO.setmode(GPIO.BOARD)
+    ir = Ultrasonic(pin_t_id, pin_e_id)
+    try:
+        while True:
+            print(ir.disMeasure())
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        pass
+
 if __name__ == '__main__': 
     
-    GPIO.setmode(GPIO.BOARD)
+    # test_ir(GPIO_17)
+    # test_ir(GPIO_21)
+    test_us(GPIO_16, GPIO_20)
 
-    b = Bizzer(16)    
 
-    while True:
-        time.sleep(0.2)
+    # try:
+    #     while True:
+    #         time.sleep(0.2)
+    # except KeyboardInterrupt:
 
     # GPIO.setmode(GPIO.BOARD)
     # GPIO.setwarnings(False)
