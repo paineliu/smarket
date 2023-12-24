@@ -62,7 +62,7 @@ class SMarket:
 
         self.flame = Flame(PIN_ID_FlAME, gpio_callback)  # 火情
         self.buy_cola = UInterrupter(PIN_ID_BTN_BUY_1, gpio_callback) # 买可乐
-        self.buy_milk = ColorButton(PIN_ID_BTN_BUY_2, gpio_callback) # 买牛奶
+        self.buy_milk = UInterrupter(PIN_ID_BTN_BUY_2, gpio_callback) # 买牛奶
         self.pay = Reed(PIN_ID_UIRP_PAY, gpio_callback) # 付款
         self.reset = ColorButton(PIN_ID_BTN_RESET, gpio_callback) # 复位
 
@@ -94,6 +94,7 @@ class SMarket:
         # 温度检测
         init_temper = self.temper.get_init_temper()
         if (curr_temper > init_temper + 1.0):
+            self.temper.init_temper = curr_temper
             if not self.fan_state == ACT_FAN_ON:
                 self.fan_state = ACT_FAN_ON
                 detect_callback(ACT_FAN_ON, curr_temper)
@@ -125,10 +126,15 @@ class SMarket:
     
     def fan_on(self, play_voice=True):
         if not self.fan_is_on():
+            if play_voice:
+                self.tts.say('检测到室温过高，自动开启空调')
+
             self.fan.on()
 
     def fan_off(self, play_voice=True):
         if self.fan_is_on():
+            if play_voice:
+                self.tts.say('室温恢复，关闭空调')
             self.fan.off()
 
     def flame_is_on(self):
@@ -217,10 +223,11 @@ class SMarket:
     def user_leave(self):
         if (self.user.get_status() == User.ENTER):
             if (self.user.need_pay()):
-                self.tts.say('你还没有付款，请不要离开')
                 self.red_light.on()
+                self.tts.say('你还没有付款，请不要离开')
             else:
                 self.user.leave()
+                self.red_light.off()
                 self.tts.say('谢谢惠顾，欢迎下次光临')
                 # self.audio.play('./wav/bye.wav')
 

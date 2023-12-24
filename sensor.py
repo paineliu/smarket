@@ -197,6 +197,7 @@ class Temperature:
             if i != 'w1_bus_master1':
                 self.ds18b20 = i       # ds18b20存放在ds18b20地址
         self.init_temper = self.get_temper()
+        self.last_temper = self.init_temper
         # print(self.init_temper)
 
     # 读取ds18b20地址数据
@@ -209,6 +210,7 @@ class Temperature:
         temperaturedata = secondline.split(" ")[9]# 获取温度数据
         temperature = float(temperaturedata[2:])  # 去掉前两位
         temperature = temperature / 1000          # 去掉小数点
+        self.last_temper = temperature
         return temperature                        # 返回温度值
     
     def get_init_temper(self):
