@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import datetime
 import RPi.GPIO as GPIO
 
 GPIO_4  = 7
@@ -19,6 +20,25 @@ GPIO_24 = 18
 GPIO_25 = 22
 GPIO_26 = 37
 GPIO_27 = 13
+
+
+PIN_ID_IRO_ENTER = GPIO_17
+PIN_ID_BTN_BUY_1 = GPIO_27
+PIN_ID_BTN_BUY_2 = GPIO_22 
+PIN_ID_REED_PAY  = GPIO_5
+PIN_ID_FAN_AIR   = GPIO_6
+PIN_ID_LED_GREEN = GPIO_13
+PIN_ID_LED_RED   = GPIO_19
+PIN_ID_FlAME     = GPIO_26
+
+PIN_ID_LASER    = GPIO_12
+PIN_ID_USONIC_T = GPIO_16
+PIN_ID_USONIC_E = GPIO_20
+PIN_ID_IRO_EXIT = GPIO_21
+
+PIN_ID_BIZZER    = GPIO_23
+PIN_ID_LED_COLOR = GPIO_24
+PIN_ID_BTN_RESET = GPIO_25
 
 # 指示类传感器
 class Indicator:
@@ -108,11 +128,13 @@ class LedRG:
 
 # 开关类传感器
 class Switch:
-    def __init__(self, pin_id, pin_callback, edge = GPIO.FALLING, pull_up_down=GPIO.PUD_UP):
+    def __init__(self, pin_id, pin_callback=None, edge = GPIO.FALLING, pull_up_down=GPIO.PUD_UP):
         self.pin_id = pin_id
         GPIO.setup(self.pin_id, GPIO.IN, pull_up_down=pull_up_down)
-        GPIO.add_event_detect(self.pin_id, edge, callback=pin_callback, bouncetime=200)
-
+        if (not pin_callback is None):
+            GPIO.add_event_detect(self.pin_id, edge, callback=pin_callback, bouncetime=200)
+    def input(self):
+        return GPIO.input(self.pin_id)
 # 按钮
 class Button(Switch):
     def __init__(self, pin_id, pin_callback):
@@ -145,7 +167,7 @@ class Photoresistor(Switch):
 
 # 火焰传感器
 class Flame(Switch):
-    def __init__(self, pin_id, pin_callback):
+    def __init__(self, pin_id, pin_callback=None):
         super().__init__(pin_id, pin_callback, edge = GPIO.BOTH)
 
 # 红外避障传感器
@@ -196,8 +218,8 @@ class Temperature:
         for i in os.listdir('/sys/bus/w1/devices'):
             if i != 'w1_bus_master1':
                 self.ds18b20 = i       # ds18b20存放在ds18b20地址
+        self.last_temper = 0
         self.init_temper = self.get_temper()
-        self.last_temper = self.init_temper
         # print(self.init_temper)
 
     # 读取ds18b20地址数据
@@ -206,11 +228,16 @@ class Temperature:
         tfile = open(location)  # 打开ds18b20 
         text = tfile.read()     # 读取到温度值
         tfile.close()                    # 关闭读取
-        secondline = text.split("\n")[1] # 格式化处理
-        temperaturedata = secondline.split(" ")[9]# 获取温度数据
-        temperature = float(temperaturedata[2:])  # 去掉前两位
-        temperature = temperature / 1000          # 去掉小数点
-        self.last_temper = temperature
+        items = text.split("\n")
+        if (len(items) > 1):
+            secondline = items[1] # 格式化处理
+            temperaturedata = secondline.split(" ")[9]# 获取温度数据
+            temperature = float(temperaturedata[2:])  # 去掉前两位
+            temperature = temperature / 1000          # 去掉小数点
+            self.last_temper = temperature
+        else:
+            temperature = self.last_temper
+            print('error read temper')
         return temperature                        # 返回温度值
     
     def get_init_temper(self):
@@ -243,12 +270,46 @@ def test_us(pin_t_id, pin_e_id):
     except KeyboardInterrupt:
         pass
 
+def test_temper():
+    temp = Temperature()
+    try:
+        while True:
+            print(temp.get_temper())
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        pass
+
+def smarket_gpio_callback(pin_id):
+    print('[{}] pin={}, val={}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], pin_id, GPIO.input(pin_id)))
+
+    pass
+
+def test_flame():
+    GPIO.setmode(GPIO.BOARD)
+    temp = Flame(GPIO_26)
+    try:
+        while True:
+            print('[{}] val={}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], temp.input()))
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        pass
+
+def test_reed():
+    GPIO.setmode(GPIO.BOARD)
+    temp = Reed(GPIO_5, smarket_gpio_callback)
+    try:
+        while True:
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        pass
+
 if __name__ == '__main__': 
     
     # test_ir(GPIO_17)
     # test_ir(GPIO_21)
-    test_us(GPIO_16, GPIO_20)
-
+    # test_us(GPIO_16, GPIO_20)
+    # test_flame()
+    test_reed()
 
     # try:
     #     while True:

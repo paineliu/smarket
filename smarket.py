@@ -1,6 +1,5 @@
 import RPi.GPIO as GPIO
 from sensor import *
-from audio import Audio
 from asr import ASR
 from tts_baidu import TTSBaidu
 
@@ -9,24 +8,6 @@ from user import User
 from store import Store
 from datetime import datetime
 
-
-PIN_ID_IRO_ENTER = GPIO_17
-PIN_ID_BTN_BUY_1 = GPIO_27
-PIN_ID_BTN_BUY_2 = GPIO_22 
-PIN_ID_UIRP_PAY  = GPIO_5
-PIN_ID_FAN_AIR   = GPIO_6
-PIN_ID_LED_GREEN = GPIO_13
-PIN_ID_LED_RED   = GPIO_19
-PIN_ID_FlAME     = GPIO_26
-
-PIN_ID_LASER    = GPIO_12
-PIN_ID_USONIC_T = GPIO_16
-PIN_ID_USONIC_E = GPIO_20
-PIN_ID_IRO_EXIT = GPIO_21
-
-PIN_ID_BIZZER    = GPIO_23
-PIN_ID_LED_COLOR = GPIO_24
-PIN_ID_BTN_RESET = GPIO_25
 
 ACT_ENTER   = 1
 ACT_EXIT    = 2
@@ -37,18 +18,22 @@ ACT_FAN_OFF = 4
 ACT_FORBID_UNSAFE  = 5
 ACT_FORBID_SAFE    = 6
 
+ACT_FLAME_ON  = 7
+ACT_FLAME_OFF = 8
+
 ACT_FIND_COLA = 11
 ACT_FIND_MILK = 12
 
 
 class SMarket:
     def __init__(self):
-        self.audio = Audio()
         self.tts = TTSBaidu()
         self.user = User()
         self.store = Store()
         self.fan_state = ACT_FAN_OFF
         self.forbid_state = ACT_FORBID_SAFE
+        self.flame_state = ACT_FLAME_OFF
+
         GPIO.setmode(GPIO.BOARD)
         GPIO.setwarnings(False)
 
@@ -60,10 +45,10 @@ class SMarket:
         self.ir_exit = IRObstacle(PIN_ID_IRO_EXIT)     # 离开
         self.us_forbid = Ultrasonic(PIN_ID_USONIC_T, PIN_ID_USONIC_E) # 禁区
 
-        self.flame = Flame(PIN_ID_FlAME, gpio_callback)  # 火情
+        self.flame = Flame(PIN_ID_FlAME)  # 火情
         self.buy_cola = UInterrupter(PIN_ID_BTN_BUY_1, gpio_callback) # 买可乐
         self.buy_milk = UInterrupter(PIN_ID_BTN_BUY_2, gpio_callback) # 买牛奶
-        self.pay = Reed(PIN_ID_UIRP_PAY, gpio_callback) # 付款
+        self.pay_btn = Reed(PIN_ID_REED_PAY, gpio_callback) # 付款
         self.reset = ColorButton(PIN_ID_BTN_RESET, gpio_callback) # 复位
 
         self.fan = Fan(PIN_ID_FAN_AIR) # 风扇
@@ -82,8 +67,9 @@ class SMarket:
         dis = self.us_forbid.disMeasure()
         enter = self.ir_enter.input()
         exit = self.ir_exit.input()
+        flame = self.flame.input()
         
-        print('[{}] asr={} temp={:.1f} enter={} exit={} dis={:.3f}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], asr_id, curr_temper, enter, exit, dis))
+        print('[{}] asr={} temp={:.1f} flame={} enter={} exit={} dis={:.3f}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], asr_id, curr_temper, flame, enter, exit, dis))
 
         # 语音识别
         if (asr_id == self.asr.FIND_COLA): 
@@ -110,6 +96,15 @@ class SMarket:
         # 离开检测
         if (exit == 0):
             detect_callback(ACT_EXIT)
+
+        if (flame == 0):
+            if not self.flame_state == ACT_FLAME_ON:
+                self.flame_state = ACT_FLAME_ON
+                detect_callback(ACT_FLAME_ON)
+        else:
+            if self.flame_state == ACT_FLAME_ON:
+                self.flame_state = ACT_FLAME_OFF
+                detect_callback(ACT_FLAME_OFF)
 
         # 禁区检测
         if (dis < 8.0):
@@ -138,18 +133,17 @@ class SMarket:
             self.fan.off()
 
     def flame_is_on(self):
-        return self.color_light.is_on()
+        return self.red_light.is_on()
     
     def flame_on(self, play_voice=True):
         if not self.flame_is_on():
             if play_voice:
                 self.tts.say('检测到火情，请立即撤离')
             self.red_light.on()
-            self.color_light.on()
 
     def flame_off(self, play_voice=True):
         if self.flame_is_on():
-            self.color_light.off()
+            self.red_light.off()
             if play_voice:
                 self.tts.say('火情解除')
 
@@ -158,6 +152,7 @@ class SMarket:
     
     def forbid_on(self, play_voice=True):
         if (not self.forbid_is_on()):
+            self.color_light.on()
             if play_voice:
                 self.tts.say("检测到非法入侵，请快速离开")
             self.bizzer.on()
@@ -165,6 +160,7 @@ class SMarket:
     def forbid_off(self, play_voice=True):
         if (self.forbid_is_on()):
             self.bizzer.off()
+            self.color_light.off()
             if play_voice:
                 self.tts.say('禁区恢复安全')
 
@@ -217,19 +213,19 @@ class SMarket:
         if (self.user.get_status() != User.ENTER):
             self.user.enter()
             self.tts.say('欢迎光临')
-            # self.audio.play('./wav/welcome.wav')
 
 
     def user_leave(self):
         if (self.user.get_status() == User.ENTER):
             if (self.user.need_pay()):
                 self.red_light.on()
+                self.laser.on()
                 self.tts.say('你还没有付款，请不要离开')
             else:
                 self.user.leave()
                 self.red_light.off()
+                self.laser.off()
                 self.tts.say('谢谢惠顾，欢迎下次光临')
-                # self.audio.play('./wav/bye.wav')
 
     def reset_all(self):
         self.fan_off(False)
@@ -251,6 +247,14 @@ def smarket_detect_callback(act_id, param = None):
     # 风扇关闭
     if (act_id == ACT_FAN_OFF):
         g_smarket.fan_off()
+
+    # 风扇打开
+    if (act_id == ACT_FLAME_ON):
+        g_smarket.flame_on()
+
+    # 风扇关闭
+    if (act_id == ACT_FLAME_OFF):
+        g_smarket.flame_off()
 
     # 进门
     if (act_id == ACT_ENTER):
@@ -277,17 +281,13 @@ def smarket_detect_callback(act_id, param = None):
         g_smarket.forbid_off()
             
 
-
 def smarket_gpio_callback(pin_id):
     print('[{}] pin={}, val={}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], pin_id, GPIO.input(pin_id)))
 
     if (pin_id == PIN_ID_BTN_RESET):
         g_smarket.reset_all()       
 
-    if (pin_id == PIN_ID_FlAME):
-        g_smarket.flame_on()
-
-    if (pin_id == PIN_ID_UIRP_PAY):
+    if (pin_id == PIN_ID_REED_PAY):
         if (GPIO.input(pin_id) == 0):
             g_smarket.pay()
         
