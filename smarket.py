@@ -126,14 +126,14 @@ class SMarket:
     def fan_on(self, play_voice=True):
         if not self.fan_is_on():
             if play_voice:
-                self.tts.say('检测到室温过高，自动开启空调')
+                self.tts.say('检测到室温过高，自动开启空调。')
 
             self.fan.on()
 
     def fan_off(self, play_voice=True):
         if self.fan_is_on():
             if play_voice:
-                self.tts.say('室温恢复，关闭空调')
+                self.tts.say('室温恢复，关闭空调。')
             self.fan.off()
 
     def flame_is_on(self):
@@ -142,14 +142,14 @@ class SMarket:
     def flame_on(self, play_voice=True):
         if not self.flame_is_on():
             if play_voice:
-                self.tts.say('检测到火情，请立即撤离')
+                self.tts.say('检测到火情，请立即撤离。')
             self.red_light.on()
 
     def flame_off(self, play_voice=True):
         if self.flame_is_on():
             self.red_light.off()
             if play_voice:
-                self.tts.say('火情解除')
+                self.tts.say('火情解除。')
 
     def forbid_is_on(self):
         return self.bizzer.is_on()
@@ -158,7 +158,7 @@ class SMarket:
         if (not self.forbid_is_on()):
             self.color_light.on()
             if play_voice:
-                self.tts.say("检测到非法入侵，请快速离开")
+                self.tts.say("检测到非法入侵。")
             self.bizzer.on()
         
     def forbid_off(self, play_voice=True):
@@ -166,11 +166,11 @@ class SMarket:
             self.bizzer.off()
             self.color_light.off()
             if play_voice:
-                self.tts.say('禁区恢复安全')
+                self.tts.say('禁区恢复安全。')
 
     def pay(self):
         if (self.user.need_pay()):
-            message = '你买了'
+            message = '你买了，'
 
             user_cola_total = self.user.get_total(Product.COLA)
             if (user_cola_total > 0):
@@ -179,19 +179,21 @@ class SMarket:
             user_milk_total = self.user.get_total(Product.MILK)
             if (user_milk_total > 0):
                 message += '{}瓶牛奶，'.format(user_milk_total)
-            message += '已经完成付款'
+            
+            message += '总计{}元，已经完成付款。'.format(user_cola_total * 2 + user_milk_total * 1)
             self.tts.say(message)
             self.user.pay()
             self.red_light.off()
             self.laser.off()
         else:
-            self.tts.say('你还没有购买商品，随便买点吧')
+            self.tts.say('你还没有购买商品，随便买点吧。')
     
     def find(self, product_id):
-        if (product_id == Product.COLA):
-            self.tts.say('可乐在C区，第二排货架')
-        if product_id == Product.MILK:
-            self.tts.say('牛奶在A区，第一排货架')
+        if self.user.get_status() == User.ENTER:
+            if (product_id == Product.COLA):
+                self.tts.say('可乐在西区，第二排货架。')
+            if product_id == Product.MILK:
+                self.tts.say('牛奶在币区，第一排货架。')
 
     def buy(self, product_id):
         if (product_id == Product.COLA):
@@ -199,26 +201,26 @@ class SMarket:
                 self.store.sell(product_id)
                 self.user.buy(product_id)
                 if self.store.get_total(product_id) > 0:
-                    self.tts.say('你买了{}瓶可乐，库存还有{}瓶'.format(self.user.get_total(product_id), self.store.get_total(product_id)))
+                    self.tts.say('你买了{}瓶可乐，库存还有{}瓶。'.format(self.user.get_total(product_id), self.store.get_total(product_id)))
                 else:
-                    self.tts.say('你买了{}瓶可乐，已经没有库存了'.format(self.user.get_total(product_id)))
+                    self.tts.say('你买了{}瓶可乐，已经没有库存了。'.format(self.user.get_total(product_id)))
             else:
-                self.tts.say('可乐卖光了，下次再来吧')
+                self.tts.say('可乐卖光了，下次再来吧。')
         if product_id == Product.MILK:
             if self.store.get_total(product_id) > 0:
                 self.store.sell(product_id)
                 self.user.buy(product_id)
                 if self.store.get_total(product_id) > 0:
-                    self.tts.say('你买了{}瓶牛奶，库存还有{}瓶'.format(self.user.get_total(product_id), self.store.get_total(product_id)))
+                    self.tts.say('你买了{}瓶牛奶，库存还有{}瓶。'.format(self.user.get_total(product_id), self.store.get_total(product_id)))
                 else:
-                    self.tts.say('你买了{}瓶牛奶，已经没有库存了'.format(self.user.get_total(product_id)))
+                    self.tts.say('你买了{}瓶牛奶，已经没有库存了。'.format(self.user.get_total(product_id)))
             else:
-                self.tts.say('牛奶卖光了，下次再来吧')
+                self.tts.say('牛奶卖光了，下次再来吧。')
 
     def user_enter(self):
         if (self.user.get_status() != User.ENTER):
             self.user.enter()
-            self.tts.say('欢迎光临')
+            self.tts.say('欢迎光临！')
 
 
     def user_leave(self):
@@ -226,10 +228,10 @@ class SMarket:
             if (self.user.need_pay()):
                 self.red_light.on()
                 self.laser.on()
-                self.tts.say('你还没有付款，请不要离开')
+                self.tts.say('你还没有付款，请不要离开。')
             else:
                 self.user.leave()
-                self.tts.say('谢谢惠顾，欢迎下次光临')
+                self.tts.say('谢谢惠顾，欢迎下次光临！')
 
     def hello(self):
         self.tts.say('我是购物助手，能为您做点什么？')
