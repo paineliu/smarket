@@ -21,6 +21,7 @@ ACT_FORBID_SAFE    = 6
 ACT_FLAME_ON  = 7
 ACT_FLAME_OFF = 8
 
+ACT_HELLO = 10
 ACT_FIND_COLA = 11
 ACT_FIND_MILK = 12
 
@@ -72,7 +73,10 @@ class SMarket:
         print('[{}] asr={} temp={:.1f} flame={} enter={} exit={} dis={:.3f}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], asr_id, curr_temper, flame, enter, exit, dis))
 
         # 语音识别
-        if (asr_id == self.asr.FIND_COLA): 
+        if (asr_id == self.asr.HELLO):
+            detect_callback(ACT_HELLO)
+            pass
+        elif (asr_id == self.asr.FIND_COLA): 
             detect_callback(ACT_FIND_COLA)
         elif (asr_id == self.asr.FIND_MILK):
             detect_callback(ACT_FIND_MILK) 
@@ -178,6 +182,8 @@ class SMarket:
             message += '已经完成付款'
             self.tts.say(message)
             self.user.pay()
+            self.red_light.off()
+            self.laser.off()
         else:
             self.tts.say('你还没有购买商品，随便买点吧')
     
@@ -223,9 +229,10 @@ class SMarket:
                 self.tts.say('你还没有付款，请不要离开')
             else:
                 self.user.leave()
-                self.red_light.off()
-                self.laser.off()
                 self.tts.say('谢谢惠顾，欢迎下次光临')
+
+    def hello(self):
+        self.tts.say('我是购物助手，能为您做点什么？')
 
     def reset_all(self):
         self.fan_off(False)
@@ -263,6 +270,9 @@ def smarket_detect_callback(act_id, param = None):
     # 出门
     if (act_id == ACT_EXIT):
         g_smarket.user_leave()
+
+    if act_id == ACT_HELLO:
+        g_smarket.hello()
 
     # 可乐在哪里
     if act_id == ACT_FIND_COLA:
