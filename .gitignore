@@ -8,6 +8,7 @@ __pycache__/
 
 # Demo
 robo/
+myvenv/
 
 # Distribution / packaging
 .Python

@@ -142,7 +142,7 @@ class Button(Switch):
 
 # 彩色按钮
 class ColorButton(Switch):
-    def __init__(self, pin_id, pin_callback):
+    def __init__(self, pin_id, pin_callback=None):
         super().__init__(pin_id, pin_callback, edge = GPIO.RISING, pull_up_down = GPIO.PUD_DOWN)
 
 # 震动开关
@@ -152,12 +152,12 @@ class Vibration(Switch):
 
 # U型光电开关
 class UInterrupter(Switch):
-    def __init__(self, pin_id, pin_callback):
+    def __init__(self, pin_id, pin_callback=None):
         super().__init__(pin_id, pin_callback)
 
 # 干簧管开关
 class Reed(Switch):
-    def __init__(self, pin_id, pin_callback):
+    def __init__(self, pin_id, pin_callback=None):
         super().__init__(pin_id, pin_callback, edge = GPIO.BOTH)
 
 # 光敏电阻传感器
@@ -294,6 +294,17 @@ def test_flame():
     except KeyboardInterrupt:
         pass
 
+def test_reed_2():
+    GPIO.setmode(GPIO.BOARD)
+    temp = Flame(GPIO_27)
+    try:
+        while True:
+            print('[{}] val={}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], temp.input()))
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        pass
+
+
 def test_reed():
     GPIO.setmode(GPIO.BOARD)
     temp = Reed(GPIO_5, smarket_gpio_callback)
@@ -309,7 +320,7 @@ if __name__ == '__main__':
     # test_ir(GPIO_21)
     # test_us(GPIO_16, GPIO_20)
     # test_flame()
-    test_reed()
+    test_reed_2()
 
     # try:
     #     while True:

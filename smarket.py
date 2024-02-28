@@ -1,4 +1,5 @@
 import RPi.GPIO as GPIO
+from pynput import keyboard
 from sensor import *
 from asr import ASR
 from tts_baidu import TTSBaidu
@@ -38,7 +39,7 @@ class SMarket:
         GPIO.setmode(GPIO.BOARD)
         GPIO.setwarnings(False)
 
-    def start(self, gpio_callback):
+    def start(self, gpio_callback=None):
 
         self.asr = ASR(0x79) # 语音模块
         self.temper = Temperature() # 温度检测
@@ -47,10 +48,10 @@ class SMarket:
         self.us_forbid = Ultrasonic(PIN_ID_USONIC_T, PIN_ID_USONIC_E) # 禁区
 
         self.flame = Flame(PIN_ID_FlAME)  # 火情
-        self.buy_cola = UInterrupter(PIN_ID_BTN_BUY_1, gpio_callback) # 买可乐
-        self.buy_milk = UInterrupter(PIN_ID_BTN_BUY_2, gpio_callback) # 买牛奶
-        self.pay_btn = Reed(PIN_ID_REED_PAY, gpio_callback) # 付款
-        self.reset = ColorButton(PIN_ID_BTN_RESET, gpio_callback) # 复位
+        self.buy_cola = UInterrupter(PIN_ID_BTN_BUY_1) # 买可乐
+        self.buy_milk = UInterrupter(PIN_ID_BTN_BUY_2) # 买牛奶
+        self.pay_btn = Reed(PIN_ID_REED_PAY) # 付款
+        self.reset = ColorButton(PIN_ID_BTN_RESET) # 复位
 
         self.fan = Fan(PIN_ID_FAN_AIR) # 风扇
         self.red_light = Led(PIN_ID_LED_RED) # 红灯
@@ -58,8 +59,12 @@ class SMarket:
         self.laser = Laser(PIN_ID_LASER)
         self.color_light = Led(PIN_ID_LED_COLOR) # 彩灯
         self.bizzer = Bizzer(PIN_ID_BIZZER) # 蜂鸣器
+        self.tts.say('欢迎使用无人超市。')
+        self.last_pay = 1
+        self.last_buy_cola = 0
+        self.last_buy_milk = 0
+        self.last_reset = 0
 
-        print("\nStart completed.")
 
     def detect(self, detect_callback):
 
@@ -69,16 +74,43 @@ class SMarket:
         enter = self.ir_enter.input()
         exit = self.ir_exit.input()
         flame = self.flame.input()
-        
-        print('[{}] asr={} temp={:.1f} flame={} enter={} exit={} dis={:.3f}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], asr_id, curr_temper, flame, enter, exit, dis))
+        pay = self.pay_btn.input()
+        buy_cola = self.buy_cola.input()
+        buy_milk = self.buy_milk.input()
+        reset = self.reset.input()
+
+        print('[{}] asr={} cola={} milk={} pay={} temp={:.1f} flame={} enter={} exit={} dis={:.3f}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], asr_id, buy_cola, buy_milk, pay, curr_temper, flame, enter, exit, dis))
+
+        if (self.last_reset != reset):
+            self.last_reset = reset
+            if (reset == 1):
+                self.reset()
+
+        if (self.last_pay != pay):
+            self.last_pay = pay
+            if (pay == 0):
+                self.pay()
+
+        if (self.last_buy_cola != buy_cola):
+            self.last_buy_cola = buy_cola
+            if (buy_cola == 1):
+                self.buy(Product.COLA)
+
+        if (self.last_buy_milk != buy_milk):
+            self.last_buy_milk = buy_milk
+            if (buy_milk == 1):
+                self.buy(Product.MILK)
 
         # 语音识别
         if (asr_id == self.asr.HELLO):
+            self.hello()
             detect_callback(ACT_HELLO)
             pass
-        elif (asr_id == self.asr.FIND_COLA): 
+        elif (asr_id == self.asr.FIND_COLA):
+            self.find(Product.COLA) 
             detect_callback(ACT_FIND_COLA)
         elif (asr_id == self.asr.FIND_MILK):
+            self.find(Product.MILK) 
             detect_callback(ACT_FIND_MILK) 
 
         # 温度检测
@@ -87,37 +119,45 @@ class SMarket:
             self.temper.init_temper = curr_temper
             if not self.fan_state == ACT_FAN_ON:
                 self.fan_state = ACT_FAN_ON
+                self.fan_on()
                 detect_callback(ACT_FAN_ON, curr_temper)
         else:
             if not self.fan_state == ACT_FAN_OFF:
                 self.fan_state = ACT_FAN_OFF
+                self.fan_off()
                 detect_callback(ACT_FAN_OFF, curr_temper)
 
         # 进入检测
         if (enter == 0):
+            self.user_enter()
             detect_callback(ACT_ENTER)
 
         # 离开检测
         if (exit == 0):
+            self.user_leave()
             detect_callback(ACT_EXIT)
 
         if (flame == 0):
             if not self.flame_state == ACT_FLAME_ON:
                 self.flame_state = ACT_FLAME_ON
+                self.flame_on()
                 detect_callback(ACT_FLAME_ON)
         else:
             if self.flame_state == ACT_FLAME_ON:
                 self.flame_state = ACT_FLAME_OFF
+                self.flame_off()
                 detect_callback(ACT_FLAME_OFF)
 
         # 禁区检测
         if (dis < 8.0):
             if not self.forbid_state == ACT_FORBID_UNSAFE:
                 self.forbid_state = ACT_FORBID_UNSAFE
+                self.forbid_on()
                 detect_callback(ACT_FORBID_UNSAFE, dis)
         else:
             if not self.forbid_state == ACT_FORBID_SAFE:
                 self.forbid_state = ACT_FORBID_SAFE
+                self.forbid_off()
                 detect_callback(ACT_FORBID_SAFE, dis)
 
     def fan_is_on(self):
@@ -244,76 +284,100 @@ class SMarket:
         GPIO.cleanup()    
 
 
-g_smarket = SMarket()
-
 def smarket_detect_callback(act_id, param = None):
     print('  act_id={}, param = {}'.format(act_id, param))
     
-    # 风扇打开
-    if (act_id == ACT_FAN_ON):
-        g_smarket.fan_on()
+    # # 风扇打开
+    # if (act_id == ACT_FAN_ON):
+    #     g_smarket.fan_on()
 
-    # 风扇关闭
-    if (act_id == ACT_FAN_OFF):
-        g_smarket.fan_off()
+    # # 风扇关闭
+    # if (act_id == ACT_FAN_OFF):
+    #     g_smarket.fan_off()
 
-    # 风扇打开
-    if (act_id == ACT_FLAME_ON):
-        g_smarket.flame_on()
+    # # 风扇打开
+    # if (act_id == ACT_FLAME_ON):
+    #     g_smarket.flame_on()
 
-    # 风扇关闭
-    if (act_id == ACT_FLAME_OFF):
-        g_smarket.flame_off()
+    # # 风扇关闭
+    # if (act_id == ACT_FLAME_OFF):
+    #     g_smarket.flame_off()
 
-    # 进门
-    if (act_id == ACT_ENTER):
-        g_smarket.user_enter()
+    # # 进门
+    # if (act_id == ACT_ENTER):
+    #     g_smarket.user_enter()
 
-    # 出门
-    if (act_id == ACT_EXIT):
-        g_smarket.user_leave()
+    # # 出门
+    # if (act_id == ACT_EXIT):
+    #     g_smarket.user_leave()
 
-    if act_id == ACT_HELLO:
-        g_smarket.hello()
+    # if act_id == ACT_HELLO:
+    #     g_smarket.hello()
 
-    # 可乐在哪里
-    if act_id == ACT_FIND_COLA:
-        g_smarket.find(Product.COLA)
+    # # 可乐在哪里
+    # if act_id == ACT_FIND_COLA:
+    #     g_smarket.find(Product.COLA)
         
-    # 牛奶在哪里
-    if act_id == ACT_FIND_MILK:
-        g_smarket.find(Product.MILK)
+    # # 牛奶在哪里
+    # if act_id == ACT_FIND_MILK:
+    #     g_smarket.find(Product.MILK)
 
-    # 禁区危险
-    if act_id == ACT_FORBID_UNSAFE:
-        g_smarket.forbid_on()
+    # # 禁区危险
+    # if act_id == ACT_FORBID_UNSAFE:
+    #     g_smarket.forbid_on()
 
-    # 禁区安全
-    if act_id == ACT_FORBID_SAFE:
-        g_smarket.forbid_off()
+    # # 禁区安全
+    # if act_id == ACT_FORBID_SAFE:
+    #     g_smarket.forbid_off()
             
 
-def smarket_gpio_callback(pin_id):
-    print('[{}] pin={}, val={}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], pin_id, GPIO.input(pin_id)))
+# def smarket_gpio_callback(pin_id):
+#     print('[{}] pin={}, val={}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], pin_id, GPIO.input(pin_id)))
 
-    if (pin_id == PIN_ID_BTN_RESET):
-        g_smarket.reset_all()       
+#     if (pin_id == PIN_ID_BTN_RESET):
+#         g_smarket.reset_all()       
 
-    if (pin_id == PIN_ID_REED_PAY):
-        if (GPIO.input(pin_id) == 0):
-            g_smarket.pay()
+#     if (pin_id == PIN_ID_REED_PAY):
+#         if (GPIO.input(pin_id) == 0):
+#             g_smarket.pay()
         
-    if (pin_id == PIN_ID_BTN_BUY_1):
-        if (GPIO.input(pin_id) == 1):
-            g_smarket.buy(Product.COLA)
+#     if (pin_id == PIN_ID_BTN_BUY_1):
+#         if (GPIO.input(pin_id) == 1):
+#             g_smarket.buy(Product.COLA)
             
-    if (pin_id == PIN_ID_BTN_BUY_2):
-        if (GPIO.input(pin_id) == 1):
-            g_smarket.buy(Product.MILK)
+#     if (pin_id == PIN_ID_BTN_BUY_2):
+#         if (GPIO.input(pin_id) == 1):
+#             g_smarket.buy(Product.MILK)
             
+
+
 
 def smarket_main():
-    g_smarket.start(smarket_gpio_callback)
+
+    def on_press(key):
+        try:
+            print('{}'.format(key.char))
+            if (key.char == 'f'):
+                g_smarket.fan_on()
+            elif (key.char == 'g'):
+                g_smarket.fan_off()
+
+        except AttributeError:
+            pass
+
+
+    def on_release(key):
+        pass
+        # if key == keyboard.Key.esc:
+        #     return False
+    g_smarket = SMarket()
+    g_smarket.start()
+    listener = keyboard.Listener(
+        on_press=on_press)
+
+    listener.start()
+
+
     try:
         while True:
             g_smarket.detect(smarket_detect_callback)
