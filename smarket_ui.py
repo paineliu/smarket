@@ -2,15 +2,16 @@ from PySide6.QtWidgets import *
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QDateTime, QTimer, Qt
 import sys
-# from smarket import SMarket
+from smarket import SMarket
+from product import Product
 
 class SMarketWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        # self.smarket = SMarket()
-        # self.smarket.start()
+        self.smarket = SMarket()
         self.setWindowTitle("无人超市")
         self.setup_ui()
+        self.lst_message = []
 
     def setup_ui(self):
         
@@ -33,7 +34,7 @@ class SMarketWindow(QMainWindow):
         self.label_status = QLabel("版本号：1.0")
         self.statusBar.addPermanentWidget(self.label_status)
 
-        self.setGeometry(300,300,600,200)
+        self.setGeometry(300,300,800,200)
         self.label_custom=QLabel("顾客：")
         self.button_enter=QPushButton("进入超市")
         self.button_leave=QPushButton("离开超市")
@@ -61,7 +62,7 @@ class SMarketWindow(QMainWindow):
         self.button_forbid_close=QPushButton("关闭警报")
 
         self.label_status=QLabel("状态：")       
-        self.label_status_content=QLabel("0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n")
+        self.label_status_content=QLabel("\n\n\n\n\n\n\n\n\n\n")
         self.label_status_content.setAlignment(Qt.AlignmentFlag.AlignJustify) 
 
         self.button_enter.clicked.connect(self.on_act_enter)
@@ -137,63 +138,127 @@ class SMarketWindow(QMainWindow):
         self.timer=QTimer(self)
         self.timer.timeout.connect(self.onTimer)
 
-        self.timer.start(100)
+        self.timer.start(200)
 
     def onTimer(self):
-        # self.smarket.detect()
+        state_map = self.smarket.detect()
+        if 'message' in state_map:
+            self.lst_message.insert(0, state_map['message'])
+            self.lst_message = self.lst_message[0:10]
+            self.label_status_content.setText('\n'.join(self.lst_message))
+
         pass
 
     def on_act_start(self):
-        self.statusBar.showMessage("启动", 5000)
+        if not self.smarket.is_running():
+            self.smarket.start()
 
     def on_act_reset(self):
-        self.statusBar.showMessage("复位", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.reset_all()
 
     def on_act_exit(self):
-        self.statusBar.showMessage("退出", 5000)
+        self.smarket.clean()
         self.close()
 
     def on_act_enter(self):
-        self.statusBar.showMessage("on_act_enter", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.user_enter()
+        # self.statusBar.showMessage("on_act_enter", 5000)
 
     def on_act_leave(self):
-        self.statusBar.showMessage("on_act_leave", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.user_leave()
+        # self.statusBar.showMessage("on_act_leave", 5000)
 
     def on_act_greeting(self):
-        self.statusBar.showMessage("on_act_greeting", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.hello()
+        # self.statusBar.showMessage("on_act_greeting", 5000)
 
     def on_act_where_cola(self):
-        self.statusBar.showMessage("on_act_where_cola", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.find(Product.COLA)
+        # self.statusBar.showMessage("on_act_where_cola", 5000)
 
     def on_act_where_milk(self):
-        self.statusBar.showMessage("on_act_where_milk", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.find(Product.MILK)
+        # self.statusBar.showMessage("on_act_where_milk", 5000)
 
     def on_act_buy_cola(self):
-        self.statusBar.showMessage("on_act_buy_cola", 5000)
-
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.buy(Product.COLA)
+        
     def on_act_buy_milk(self):
-        self.statusBar.showMessage("on_act_buy_milk", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.buy(Product.MILK)
+        # self.statusBar.showMessage("on_act_buy_milk", 5000)
 
     def on_act_checkout(self):
-        self.statusBar.showMessage("on_act_checkout", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.pay()
+        # self.statusBar.showMessage("on_act_checkout", 5000)
 
     def on_act_fan_open(self):
-        self.statusBar.showMessage("on_act_fan_open", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.fan_on()
+        # self.statusBar.showMessage("on_act_fan_open", 5000)
 
     def on_act_fan_close(self):
-        self.statusBar.showMessage("on_act_fan_close", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.fan_off()
+        # self.statusBar.showMessage("on_act_fan_close", 5000)
 
     def on_act_fire_open(self):
-        self.statusBar.showMessage("on_act_fire_open", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.flame_on()
+        # self.statusBar.showMessage("on_act_fire_open", 5000)
 
     def on_act_fire_close(self):
-        self.statusBar.showMessage("on_act_fire_close", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.flame_off()
+        # self.statusBar.showMessage("on_act_fire_close", 5000)
 
     def on_act_forbid_open(self):
-        self.statusBar.showMessage("on_act_forbid_open", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.forbid_on()
+        # self.statusBar.showMessage("on_act_forbid_open", 5000)
 
     def on_act_forbid_close(self):
-        self.statusBar.showMessage("on_act_forbid_close", 5000)
+        if not self.smarket.is_running():
+            QMessageBox.information(self, "提示", "请先启动无人超市！")
+            return
+        self.smarket.forbid_off()
+        # self.statusBar.showMessage("on_act_forbid_close", 5000)
 
     # def onbutton(self):
     #     QMessageBox.information(self, "弹出", "tt")

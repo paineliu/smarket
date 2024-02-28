@@ -35,7 +35,7 @@ class SMarket:
         self.fan_state = ACT_FAN_OFF
         self.forbid_state = ACT_FORBID_SAFE
         self.flame_state = ACT_FLAME_OFF
-
+        self.running = False
         GPIO.setmode(GPIO.BOARD)
         GPIO.setwarnings(False)
 
@@ -65,9 +65,13 @@ class SMarket:
         self.last_buy_milk = 0
         self.last_reset = 0
 
+        self.running = True
 
-    def detect(self, detect_callback):
 
+    def detect(self, detect_callback=None):
+        if not self.running:
+            return {}
+        
         asr_id = self.asr.getResult()
         curr_temper = self.temper.get_temper()
         dis = self.us_forbid.disMeasure()
@@ -79,7 +83,22 @@ class SMarket:
         buy_milk = self.buy_milk.input()
         reset = self.reset.input()
 
-        print('[{}] asr={} cola={} milk={} pay={} temp={:.1f} flame={} enter={} exit={} dis={:.3f}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], asr_id, buy_cola, buy_milk, pay, curr_temper, flame, enter, exit, dis))
+        message = '[{}] asr={} cola={} milk={} pay={} temp={:.1f} flame={} enter={} exit={} dis={:.3f}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], asr_id, buy_cola, buy_milk, pay, curr_temper, flame, enter, exit, dis)
+
+        state_map = {'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], 
+                     'asr': asr_id,
+                     'buy_cola': buy_cola == 1,
+                     'buy_milk': buy_milk == 1,
+                     'pay': pay == 0,
+                     'flame': flame == 0,
+                     'enter':enter == 0,
+                     'exit': exit == 0,
+                     'temp': '{:.1f}'.format(curr_temper),
+                     'dist': '{:.1f}'.format(dis),
+                     'message': message
+                     }
+        
+        print(message)
 
         if (self.last_reset != reset):
             self.last_reset = reset
@@ -104,14 +123,17 @@ class SMarket:
         # 语音识别
         if (asr_id == self.asr.HELLO):
             self.hello()
-            detect_callback(ACT_HELLO)
+            if detect_callback is not None:
+                detect_callback(ACT_HELLO)
             pass
         elif (asr_id == self.asr.FIND_COLA):
             self.find(Product.COLA) 
-            detect_callback(ACT_FIND_COLA)
+            if detect_callback is not None:
+                detect_callback(ACT_FIND_COLA)
         elif (asr_id == self.asr.FIND_MILK):
             self.find(Product.MILK) 
-            detect_callback(ACT_FIND_MILK) 
+            if detect_callback is not None:
+                detect_callback(ACT_FIND_MILK) 
 
         # 温度检测
         init_temper = self.temper.get_init_temper()
@@ -120,45 +142,55 @@ class SMarket:
             if not self.fan_state == ACT_FAN_ON:
                 self.fan_state = ACT_FAN_ON
                 self.fan_on()
-                detect_callback(ACT_FAN_ON, curr_temper)
+                if detect_callback is not None:
+                    detect_callback(ACT_FAN_ON, curr_temper)
         else:
             if not self.fan_state == ACT_FAN_OFF:
                 self.fan_state = ACT_FAN_OFF
                 self.fan_off()
-                detect_callback(ACT_FAN_OFF, curr_temper)
+                if detect_callback is not None:
+                    detect_callback(ACT_FAN_OFF, curr_temper)
 
         # 进入检测
         if (enter == 0):
             self.user_enter()
-            detect_callback(ACT_ENTER)
+            if detect_callback is not None:
+                detect_callback(ACT_ENTER)
 
         # 离开检测
         if (exit == 0):
             self.user_leave()
-            detect_callback(ACT_EXIT)
+            if detect_callback is not None:
+                detect_callback(ACT_EXIT)
 
         if (flame == 0):
             if not self.flame_state == ACT_FLAME_ON:
                 self.flame_state = ACT_FLAME_ON
                 self.flame_on()
-                detect_callback(ACT_FLAME_ON)
+                if detect_callback is not None:
+                    detect_callback(ACT_FLAME_ON)
         else:
             if self.flame_state == ACT_FLAME_ON:
                 self.flame_state = ACT_FLAME_OFF
                 self.flame_off()
-                detect_callback(ACT_FLAME_OFF)
+                if detect_callback is not None:
+                    detect_callback(ACT_FLAME_OFF)
 
         # 禁区检测
         if (dis < 8.0):
             if not self.forbid_state == ACT_FORBID_UNSAFE:
                 self.forbid_state = ACT_FORBID_UNSAFE
                 self.forbid_on()
-                detect_callback(ACT_FORBID_UNSAFE, dis)
+                if detect_callback is not None:
+                    detect_callback(ACT_FORBID_UNSAFE, dis)
         else:
             if not self.forbid_state == ACT_FORBID_SAFE:
                 self.forbid_state = ACT_FORBID_SAFE
                 self.forbid_off()
-                detect_callback(ACT_FORBID_SAFE, dis)
+                if detect_callback is not None:
+                    detect_callback(ACT_FORBID_SAFE, dis)
+
+        return state_map
 
     def fan_is_on(self):
         return self.fan.is_on()
@@ -227,7 +259,7 @@ class SMarket:
             self.laser.off()
         else:
             self.tts.say('你还没有购买商品，随便买点吧。')
-    
+            
     def find(self, product_id):
         if self.user.get_status() == User.ENTER:
             if (product_id == Product.COLA):
@@ -280,8 +312,12 @@ class SMarket:
         self.fan_off(False)
         self.flame_off(False)
 
+    def is_running(self):
+        return self.running
+    
     def clean(self):
-        GPIO.cleanup()    
+        self.running = False
+        GPIO.cleanup()
 
 
 def smarket_detect_callback(act_id, param = None):
