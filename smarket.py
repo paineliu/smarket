@@ -349,9 +349,6 @@ def smarket_detect_callback(act_id, param = None):
 #         if (GPIO.input(pin_id) == 1):
 #             g_smarket.buy(Product.MILK)
             
-
-
-
 def smarket_main():
 
     def on_press(key):
