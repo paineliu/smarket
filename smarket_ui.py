@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import *
 from PySide6.QtGui import QIcon
-from PySide6.QtCore import QDateTime, QTimer
+from PySide6.QtCore import QDateTime, QTimer, Qt
 import sys
 # from smarket import SMarket
 
@@ -33,7 +33,7 @@ class SMarketWindow(QMainWindow):
         self.label_status = QLabel("版本号：1.0")
         self.statusBar.addPermanentWidget(self.label_status)
 
-        self.setGeometry(300,300,400,200)
+        self.setGeometry(300,300,600,200)
         self.label_custom=QLabel("顾客：")
         self.button_enter=QPushButton("进入超市")
         self.button_leave=QPushButton("离开超市")
@@ -60,7 +60,9 @@ class SMarketWindow(QMainWindow):
         self.button_forbid_open=QPushButton("启动警报")
         self.button_forbid_close=QPushButton("关闭警报")
 
-        self.label_status=QLabel("状态：0 02 33   555 555 3")       
+        self.label_status=QLabel("状态：")       
+        self.label_status_content=QLabel("0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n0 02 33   555 555 3\n")
+        self.label_status_content.setAlignment(Qt.AlignmentFlag.AlignJustify) 
 
         self.button_enter.clicked.connect(self.on_act_enter)
         self.button_leave.clicked.connect(self.on_act_leave)
@@ -84,39 +86,40 @@ class SMarketWindow(QMainWindow):
 
         lay_main = QVBoxLayout()
         lay1=QHBoxLayout()
-        lay1.addWidget(self.label_custom)
-        lay1.addWidget(self.button_enter)
-        lay1.addWidget(self.button_leave)
+        lay1.addWidget(self.label_custom, stretch=1)
+        lay1.addWidget(self.button_enter, stretch=3)
+        lay1.addWidget(self.button_leave, stretch=3)
 
         lay2=QHBoxLayout()
-        lay2.addWidget(self.label_help)
-        lay2.addWidget(self.button_greeting)
-        lay2.addWidget(self.button_where_milk)
-        lay2.addWidget(self.button_where_cola)
+        lay2.addWidget(self.label_help, stretch=1)
+        lay2.addWidget(self.button_greeting, stretch=2)
+        lay2.addWidget(self.button_where_milk, stretch=2)
+        lay2.addWidget(self.button_where_cola, stretch=2)
         
         lay3=QHBoxLayout()
-        lay3.addWidget(self.label_shop)
-        lay3.addWidget(self.button_buy_cola)
-        lay3.addWidget(self.button_buy_milk)
-        lay3.addWidget(self.button_checkout)
+        lay3.addWidget(self.label_shop, stretch=1)
+        lay3.addWidget(self.button_buy_cola, stretch=2)
+        lay3.addWidget(self.button_buy_milk, stretch=2)
+        lay3.addWidget(self.button_checkout, stretch=2)
 
         lay4=QHBoxLayout()
-        lay4.addWidget(self.label_fan)
-        lay4.addWidget(self.button_fan_open)
-        lay4.addWidget(self.button_fan_close)
+        lay4.addWidget(self.label_fan, stretch=1)
+        lay4.addWidget(self.button_fan_open, stretch=3)
+        lay4.addWidget(self.button_fan_close, stretch=3)
 
         lay5=QHBoxLayout()
-        lay5.addWidget(self.label_fire)
-        lay5.addWidget(self.button_fire_open)
-        lay5.addWidget(self.button_fire_close)
+        lay5.addWidget(self.label_fire, stretch=1)
+        lay5.addWidget(self.button_fire_open, stretch=3)
+        lay5.addWidget(self.button_fire_close, stretch=3)
 
         lay6=QHBoxLayout()
-        lay6.addWidget(self.label_forbid)
-        lay6.addWidget(self.button_forbid_open)
-        lay6.addWidget(self.button_forbid_close)
+        lay6.addWidget(self.label_forbid, stretch=1)
+        lay6.addWidget(self.button_forbid_open, stretch=3)
+        lay6.addWidget(self.button_forbid_close, stretch=3)
 
         lay7=QHBoxLayout()
-        lay7.addWidget(self.label_status)
+        lay7.addWidget(self.label_status, stretch=1)
+        lay7.addWidget(self.label_status_content, stretch=6)
 
         lay_main.addLayout(lay1)
         lay_main.addLayout(lay2)
