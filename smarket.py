@@ -39,8 +39,6 @@ class SMarket:
         GPIO.setmode(GPIO.BOARD)
         GPIO.setwarnings(False)
 
-    def start(self, gpio_callback=None):
-
         self.asr = ASR(0x79) # 语音模块
         self.temper = Temperature() # 温度检测
         self.ir_enter = IRObstacle(PIN_ID_IRO_ENTER)   # 进入
@@ -59,14 +57,17 @@ class SMarket:
         self.laser = Laser(PIN_ID_LASER)
         self.color_light = Led(PIN_ID_LED_COLOR) # 彩灯
         self.bizzer = Bizzer(PIN_ID_BIZZER) # 蜂鸣器
-        self.tts.say('欢迎使用无人超市。')
         self.last_pay = 0
         self.last_buy_cola = 0
         self.last_buy_milk = 0
         self.last_reset = 0
+        self.running = False
 
+    def start(self, gpio_callback=None):
         self.running = True
 
+    def pause(self):
+        self.running = False
 
     def detect(self, detect_callback=None, show_info=False):
         if not self.running:
@@ -262,11 +263,11 @@ class SMarket:
             self.tts.say('你还没有购买商品，随便买点吧。')
             
     def find(self, product_id):
-        if self.user.get_status() == User.ENTER:
-            if (product_id == Product.COLA):
-                self.tts.say('可乐在西区，第二排货架。')
-            if product_id == Product.MILK:
-                self.tts.say('酸奶在币区，第一排货架。')
+        
+        if (product_id == Product.COLA):
+            self.tts.say('可乐在西区，第二排货架。')
+        if product_id == Product.MILK:
+            self.tts.say('酸奶在币区，第一排货架。')
 
     def buy(self, product_id):
         if (product_id == Product.COLA):

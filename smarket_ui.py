@@ -6,12 +6,12 @@ from smarket import SMarket
 from product import Product
 
 class SMarketWindow(QMainWindow):
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.smarket = SMarket()
         self.setWindowTitle("无人超市")
         self.setup_ui()
-        self.pause = False
         self.lst_message = []
 
     def setup_ui(self):
@@ -145,7 +145,7 @@ class SMarketWindow(QMainWindow):
         self.timer.start(200)
 
     def onTimer(self):
-        if not self.pause:
+        if self.smarket.is_running():
             state_map = self.smarket.detect()
             if 'message' in state_map:
                 self.lst_message.insert(0, state_map['message'])
@@ -163,7 +163,10 @@ class SMarketWindow(QMainWindow):
         self.smarket.reset_all()
 
     def on_act_pause(self):
-        self.pause = not self.pause
+        if self.smarket.is_running():
+            self.smarket.pause()
+        else:
+            self.smarket.start()
 
     def on_act_exit(self):
 
