@@ -314,7 +314,7 @@ class SMarket:
         self.fan_off(False)
         self.flame_off(False)
         self.store.reset()
-        self.user.leave()
+        self.user.reset()
         self.tts.say('系统复位完成。')
 
     def is_running(self):

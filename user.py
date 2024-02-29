@@ -6,10 +6,12 @@ class User:
     LEAVE = 2
 
     def __init__(self):        
-        
+        self.reset()
+    
+    def reset(self):
         self.status = self.NONE
         self.products = {Product.COLA:0, Product.MILK:0}
-    
+
     def get_status(self):
         return self.status
     

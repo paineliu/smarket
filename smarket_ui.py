@@ -19,13 +19,14 @@ class SMarketWindow(QMainWindow):
         menuBar = self.menuBar()
         file_menu = menuBar.addMenu("文件(&F)")
         act_start = file_menu.addAction(QIcon("./icons/start.png"), "启动(&S)")
-        act_pause = file_menu.addAction(QIcon("./icons/reset.png"), "暂停(&P)")
+        act_pause = file_menu.addAction(QIcon("./icons/pause.png"), "暂停(&P)")
         act_reset = file_menu.addAction(QIcon("./icons/reset.png"), "复位(&R)") 
         act_exit  = file_menu.addAction(QIcon("./icons/exit.png"), "退出(&X)")
 
         file_toolBar = self.addToolBar("文件")
         file_toolBar.addAction(act_start)
         file_toolBar.addAction(act_pause)
+        file_toolBar.addAction(act_reset)
         file_toolBar.addAction(act_exit)
         
         act_start.triggered.connect(self.on_act_start)
