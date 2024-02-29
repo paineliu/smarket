@@ -11,6 +11,7 @@ class SMarketWindow(QMainWindow):
         self.smarket = SMarket()
         self.setWindowTitle("无人超市")
         self.setup_ui()
+        self.pause = False
         self.lst_message = []
 
     def setup_ui(self):
@@ -18,17 +19,19 @@ class SMarketWindow(QMainWindow):
         menuBar = self.menuBar()
         file_menu = menuBar.addMenu("文件(&F)")
         act_start = file_menu.addAction(QIcon("./icons/start.png"), "启动(&S)")
-        act_reset = file_menu.addAction(QIcon("./icons/reset.png"), "复位(&R)")
+        act_pause = file_menu.addAction(QIcon("./icons/reset.png"), "暂停(&P)")
+        act_reset = file_menu.addAction(QIcon("./icons/reset.png"), "复位(&R)") 
         act_exit  = file_menu.addAction(QIcon("./icons/exit.png"), "退出(&X)")
 
         file_toolBar = self.addToolBar("文件")
         file_toolBar.addAction(act_start)
-        file_toolBar.addAction(act_reset)
+        file_toolBar.addAction(act_pause)
         file_toolBar.addAction(act_exit)
         
         act_start.triggered.connect(self.on_act_start)
         act_reset.triggered.connect(self.on_act_reset)
         act_exit.triggered.connect(self.on_act_exit)
+        act_pause.triggered.connect(self.on_act_pause)
 
         self.statusBar = self.statusBar()
         self.label_status = QLabel("版本号：1.0")
@@ -41,12 +44,12 @@ class SMarketWindow(QMainWindow):
 
         self.label_help=QLabel("咨询：")       
         self.button_greeting=QPushButton("问候")
-        self.button_where_milk=QPushButton("牛奶在哪")
+        self.button_where_milk=QPushButton("酸奶在哪")
         self.button_where_cola=QPushButton("可乐在哪")
         
         self.label_shop=QLabel("购物：")       
         self.button_buy_cola=QPushButton("购买可乐")
-        self.button_buy_milk=QPushButton("购买牛奶")
+        self.button_buy_milk=QPushButton("购买酸奶")
         self.button_checkout=QPushButton("结算")
 
         self.label_fan=QLabel("空调：")       
@@ -93,9 +96,9 @@ class SMarketWindow(QMainWindow):
 
         lay2=QHBoxLayout()
         lay2.addWidget(self.label_help, stretch=1)
-        lay2.addWidget(self.button_greeting, stretch=2)
-        lay2.addWidget(self.button_where_milk, stretch=2)
         lay2.addWidget(self.button_where_cola, stretch=2)
+        lay2.addWidget(self.button_where_milk, stretch=2)
+        lay2.addWidget(self.button_greeting, stretch=2)
         
         lay3=QHBoxLayout()
         lay3.addWidget(self.label_shop, stretch=1)
@@ -141,13 +144,12 @@ class SMarketWindow(QMainWindow):
         self.timer.start(200)
 
     def onTimer(self):
-        state_map = self.smarket.detect()
-        if 'message' in state_map:
-            self.lst_message.insert(0, state_map['message'])
-            self.lst_message = self.lst_message[0:10]
-            self.label_status_content.setText('\n'.join(self.lst_message))
-
-        pass
+        if not self.pause:
+            state_map = self.smarket.detect()
+            if 'message' in state_map:
+                self.lst_message.insert(0, state_map['message'])
+                self.lst_message = self.lst_message[0:10]
+                self.label_status_content.setText('\n'.join(self.lst_message))
 
     def on_act_start(self):
         if not self.smarket.is_running():
@@ -159,7 +161,11 @@ class SMarketWindow(QMainWindow):
             return
         self.smarket.reset_all()
 
+    def on_act_pause(self):
+        self.pause = not self.pause
+
     def on_act_exit(self):
+
         self.smarket.clean()
         self.close()
 

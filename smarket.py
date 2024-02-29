@@ -49,7 +49,7 @@ class SMarket:
 
         self.flame = Flame(PIN_ID_FlAME)  # 火情
         self.buy_cola = UInterrupter(PIN_ID_BTN_BUY_1) # 买可乐
-        self.buy_milk = UInterrupter(PIN_ID_BTN_BUY_2) # 买牛奶
+        self.buy_milk = UInterrupter(PIN_ID_BTN_BUY_2) # 买酸奶
         self.pay_btn = Reed(PIN_ID_REED_PAY) # 付款
         self.reset = ColorButton(PIN_ID_BTN_RESET) # 复位
 
@@ -60,7 +60,7 @@ class SMarket:
         self.color_light = Led(PIN_ID_LED_COLOR) # 彩灯
         self.bizzer = Bizzer(PIN_ID_BIZZER) # 蜂鸣器
         self.tts.say('欢迎使用无人超市。')
-        self.last_pay = 1
+        self.last_pay = 0
         self.last_buy_cola = 0
         self.last_buy_milk = 0
         self.last_reset = 0
@@ -68,7 +68,7 @@ class SMarket:
         self.running = True
 
 
-    def detect(self, detect_callback=None):
+    def detect(self, detect_callback=None, show_info=False):
         if not self.running:
             return {}
         
@@ -98,12 +98,13 @@ class SMarket:
                      'message': message
                      }
         
-        print(message)
+        if show_info:
+            print(message)
 
         if (self.last_reset != reset):
             self.last_reset = reset
             if (reset == 1):
-                self.reset()
+                self.reset_all()
 
         if (self.last_pay != pay):
             self.last_pay = pay
@@ -250,7 +251,7 @@ class SMarket:
 
             user_milk_total = self.user.get_total(Product.MILK)
             if (user_milk_total > 0):
-                message += '{}瓶牛奶，'.format(user_milk_total)
+                message += '{}瓶酸奶，'.format(user_milk_total)
             
             message += '总计{}元，已经完成付款。'.format(user_cola_total * 2 + user_milk_total * 1)
             self.tts.say(message)
@@ -265,7 +266,7 @@ class SMarket:
             if (product_id == Product.COLA):
                 self.tts.say('可乐在西区，第二排货架。')
             if product_id == Product.MILK:
-                self.tts.say('牛奶在币区，第一排货架。')
+                self.tts.say('酸奶在币区，第一排货架。')
 
     def buy(self, product_id):
         if (product_id == Product.COLA):
@@ -283,15 +284,16 @@ class SMarket:
                 self.store.sell(product_id)
                 self.user.buy(product_id)
                 if self.store.get_total(product_id) > 0:
-                    self.tts.say('你买了{}瓶牛奶，库存还有{}瓶。'.format(self.user.get_total(product_id), self.store.get_total(product_id)))
+                    self.tts.say('你买了{}瓶酸奶，库存还有{}瓶。'.format(self.user.get_total(product_id), self.store.get_total(product_id)))
                 else:
-                    self.tts.say('你买了{}瓶牛奶，已经没有库存了。'.format(self.user.get_total(product_id)))
+                    self.tts.say('你买了{}瓶酸奶，已经没有库存了。'.format(self.user.get_total(product_id)))
             else:
-                self.tts.say('牛奶卖光了，下次再来吧。')
+                self.tts.say('酸奶卖光了，下次再来吧。')
 
     def user_enter(self):
         if (self.user.get_status() != User.ENTER):
             self.user.enter()
+            self.store.reset()
             self.tts.say('欢迎光临！')
 
 
@@ -306,11 +308,14 @@ class SMarket:
                 self.tts.say('谢谢惠顾，欢迎下次光临！')
 
     def hello(self):
-        self.tts.say('我是购物助手，能为您做点什么？')
+        self.tts.say('你好，我是购物助手，能为您做点什么？')
 
     def reset_all(self):
         self.fan_off(False)
         self.flame_off(False)
+        self.store.reset()
+        self.user.leave()
+        self.tts.say('系统复位完成。')
 
     def is_running(self):
         return self.running
@@ -354,7 +359,7 @@ def smarket_detect_callback(act_id, param = None):
     # if act_id == ACT_FIND_COLA:
     #     g_smarket.find(Product.COLA)
         
-    # # 牛奶在哪里
+    # # 酸奶在哪里
     # if act_id == ACT_FIND_MILK:
     #     g_smarket.find(Product.MILK)
 
@@ -413,7 +418,7 @@ def smarket_main():
 
     try:
         while True:
-            g_smarket.detect(smarket_detect_callback)
+            g_smarket.detect(smarket_detect_callback, show_info=True)
             time.sleep(0.2)
     except KeyboardInterrupt:
         g_smarket.clean()
