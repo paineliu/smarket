@@ -77,8 +77,8 @@ class ASR:
         self.addWords(self.HELLO, 'ni hao')
         self.addWords(self.FIND_COLA, 'ke le zai na')
         self.addWords(self.FIND_COLA, 'ke le zai na li')
-        self.addWords(self.FIND_MILK, 'niu nai zai na')
-        self.addWords(self.FIND_MILK, 'niu nai zai na li')
+        self.addWords(self.FIND_MILK, 'suan nai zai na')
+        self.addWords(self.FIND_MILK, 'suan nai zai na li')
 
 
     def setMode(self, mode): 

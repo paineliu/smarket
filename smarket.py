@@ -29,6 +29,7 @@ ACT_FIND_MILK = 12
 
 class SMarket:
     def __init__(self):
+        
         self.tts = TTSBaidu()
         self.user = User()
         self.store = Store()
@@ -39,24 +40,40 @@ class SMarket:
         GPIO.setmode(GPIO.BOARD)
         GPIO.setwarnings(False)
 
+        print('init ASR')
         self.asr = ASR(0x79) # 语音模块
+        print('init Temperature')
         self.temper = Temperature() # 温度检测
+        print('init IRObstacle enter')
         self.ir_enter = IRObstacle(PIN_ID_IRO_ENTER)   # 进入
+        print('init IRObstacle exit')
         self.ir_exit = IRObstacle(PIN_ID_IRO_EXIT)     # 离开
+        print('init Ultrasonic')
         self.us_forbid = Ultrasonic(PIN_ID_USONIC_T, PIN_ID_USONIC_E) # 禁区
-
+        print('init Flame')
         self.flame = Flame(PIN_ID_FlAME)  # 火情
+        print('init UInterrupter cola')
         self.buy_cola = UInterrupter(PIN_ID_BTN_BUY_1) # 买可乐
+        print('init UInterrupter milk')
         self.buy_milk = UInterrupter(PIN_ID_BTN_BUY_2) # 买酸奶
+        print('init Reed')
         self.pay_btn = Reed(PIN_ID_REED_PAY) # 付款
+        print('init Reset button')
         self.reset = ColorButton(PIN_ID_BTN_RESET) # 复位
 
+        print('init Fan')
         self.fan = Fan(PIN_ID_FAN_AIR) # 风扇
+        print('init LED red')
         self.red_light = Led(PIN_ID_LED_RED) # 红灯
+        print('init LED green')
         self.green_light = Led(PIN_ID_LED_GREEN) # 绿灯
+        print('init Laser')
         self.laser = Laser(PIN_ID_LASER)
+        print('init LED color')
         self.color_light = Led(PIN_ID_LED_COLOR) # 彩灯
+        print('init Bizzer')
         self.bizzer = Bizzer(PIN_ID_BIZZER) # 蜂鸣器
+        print('init finish')
         self.last_pay = 0
         self.last_buy_cola = 0
         self.last_buy_milk = 0
@@ -124,16 +141,15 @@ class SMarket:
 
         # 语音识别
         if (asr_id == self.asr.HELLO):
-            self.hello()
+            self.hello(True)
             if detect_callback is not None:
                 detect_callback(ACT_HELLO)
-            pass
         elif (asr_id == self.asr.FIND_COLA):
-            self.find(Product.COLA) 
+            self.find(Product.COLA, True) 
             if detect_callback is not None:
                 detect_callback(ACT_FIND_COLA)
         elif (asr_id == self.asr.FIND_MILK):
-            self.find(Product.MILK) 
+            self.find(Product.MILK, True) 
             if detect_callback is not None:
                 detect_callback(ACT_FIND_MILK) 
 
@@ -262,12 +278,12 @@ class SMarket:
         else:
             self.tts.say('你还没有购买商品，随便买点吧。')
             
-    def find(self, product_id):
-        
+    def find(self, product_id, play_tts=True):
+
         if (product_id == Product.COLA):
-            self.tts.say('可乐在西区，第二排货架。')
+            self.tts.say('可乐在西区，第二排货架。', play_tts)
         if product_id == Product.MILK:
-            self.tts.say('酸奶在币区，第一排货架。')
+            self.tts.say('酸奶在币区，第一排货架。', play_tts)
 
     def buy(self, product_id):
         if (product_id == Product.COLA):
@@ -308,15 +324,15 @@ class SMarket:
                 self.user.leave()
                 self.tts.say('谢谢惠顾，欢迎下次光临！')
 
-    def hello(self):
-        self.tts.say('你好，我是购物助手，能为您做点什么？')
+    def hello(self, play_tts = True):
+        self.tts.say('你好，我是购物助手，能为您做点什么？', play_tts)
 
     def reset_all(self):
         self.fan_off(False)
         self.flame_off(False)
         self.store.reset()
         self.user.reset()
-        self.tts.say('系统复位完成。')
+        self.tts.say('系统复位完成。', False)
 
     def is_running(self):
         return self.running

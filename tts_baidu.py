@@ -84,8 +84,10 @@ class TTSBaidu:
         md5_val = hashlib.md5(string.encode('utf8')).hexdigest()
         return md5_val
     
-    def say(self, message):
-        print(message)
+    def say(self, message, play_tts=True):
+        print(message, play_tts)
+        if play_tts == False:
+            return False
         md5_str = self.string_to_md5(message)
         os.makedirs("./wav", exist_ok=True)
         wav_filename = os.path.join('./wav', md5_str + ".wav")

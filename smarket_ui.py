@@ -155,6 +155,7 @@ class SMarketWindow(QMainWindow):
     def on_act_start(self):
         if not self.smarket.is_running():
             self.smarket.start()
+            self.smarket.reset_all()
 
     def on_act_reset(self):
         if not self.smarket.is_running():
